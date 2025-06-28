@@ -1,0 +1,12 @@
+{
+	"required": true,
+	"package": "co.stellarskys.stella.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"WorldRendererMixin"
+	],
+	"client": [],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
