@@ -1,8 +1,10 @@
 package co.stellarskys.stella.features
 
+import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.*
 import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.skyblock.LocationUtils
+import java.lang.reflect.Field
 
 open class Feature(
     private val configName: String? = null,
@@ -14,17 +16,15 @@ open class Feature(
     private var isRegistered = false
     private val areaLower = area?.lowercase()
     private val subareaLower = subarea?.lowercase()
-    private var configVal: Boolean? = null
+    private val configValue: () -> Boolean = {
+        configName?.let { config.getConfigValue<Boolean>(it) ?: false } ?: true
+    }
+
 
     init {
-        configVal == config.getConfigValue<Boolean>(configName as String)
         initialize()
-
-        config.config.registerListener { cfgName, value ->
-            if (configName == cfgName){
-                configVal = value as Boolean
-            }
-        }
+        configName?.let { Stella.registerListener(it, this) }
+        Stella.addFeature(this)
         update()
     }
 
@@ -34,14 +34,7 @@ open class Feature(
 
     open fun onUnregister() {}
 
-    fun isEnabled(): Boolean {
-        return try {
-            val configEnabled = configField?.get(Zen.config) as? Boolean ?: true
-            configEnabled && variable()
-        } catch (e: Exception) {
-            variable()
-        }
-    }
+    fun isEnabled(): Boolean = configValue() && variable()
 
     fun update() = onToggle(isEnabled() && inArea() && inSubarea())
 
