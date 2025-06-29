@@ -1,8 +1,8 @@
 package co.stellarskys.stella.features
 
 import co.stellarskys.stella.events.*
+import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.skyblock.LocationUtils
-import java.lang.reflect.Field
 
 open class Feature(
     private val configName: String? = null,
@@ -14,24 +14,17 @@ open class Feature(
     private var isRegistered = false
     private val areaLower = area?.lowercase()
     private val subareaLower = subarea?.lowercase()
-    private val configField: Field? by lazy {
-        configName?.let {
-            try {
-                Zen.config::class.java.getDeclaredField(it).apply { isAccessible = true }
-            } catch (_: Exception) {
-                println("[Zen] Config field $it not found")
-                null
-            }
-        }
-    }
+    private var configVal: Boolean? = null
 
     init {
-        configField?.let { field ->
-            if (field.get(Zen.config) == null) field.set(Zen.config, false)
-        }
+        configVal == config.getConfigValue<Boolean>(configName as String)
         initialize()
-        configName?.let { Zen.registerListener(it, this) }
-        Zen.addFeature(this)
+
+        config.config.registerListener { cfgName, value ->
+            if (configName == cfgName){
+                configVal = value as Boolean
+            }
+        }
         update()
     }
 
