@@ -3,7 +3,7 @@ package co.stellarskys.stella.features
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 
-object FeatureLoader {
+object FeatureManager {
     private val features = arrayOf(
         "msc.blockOverlay"
     )
@@ -16,11 +16,11 @@ object FeatureLoader {
         val starttime = System.currentTimeMillis()
         features.forEach { className ->
             try {
-                val fullClassName = "meowing.zen.feats.$className"
+                val fullClassName = "co.stellarskys.stella.features.$className"
                 Class.forName(fullClassName)
                 moduleCount++
             } catch (e: Exception) {
-                System.err.println("[Zen] Error initializing $className: $e")
+                System.err.println("[Stella] Error initializing $className: $e")
                 e.printStackTrace()
             }
         }

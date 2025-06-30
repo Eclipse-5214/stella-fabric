@@ -1,8 +1,8 @@
 package co.stellarskys.stella.utils
 
-import co.stellarskys.novaconfig.NovaApi
+import co.stellarskys.novaconfig.core.Config
 
-val config = NovaApi.createConfig("Stella", "stella"){
+val config = Config("Stella", "stella") {
     category("General"){
         textparagraph {
             configName = "info"
@@ -25,14 +25,14 @@ val config = NovaApi.createConfig("Stella", "stella"){
             name = "Block Highlight Color"
             description = "The color to highlight blocks"
             default = rgba(0, 255, 255, 255)
-            shouldShow { it["overlayEnabled"] == true }
+            shouldShow { settings -> settings["overlayEnabled"] as Boolean }
         }
 
         toggle {
             configName = "fillBlockOverlay"
             name = "Fill blocks"
             description = "Fills the blocks with the color"
-            shouldShow { it["overlayEnabled"] == true }
+            shouldShow { settings -> settings["overlayEnabled"] as Boolean }
         }
 
         colorpicker {
@@ -40,16 +40,14 @@ val config = NovaApi.createConfig("Stella", "stella"){
             name = "Block Fill Color"
             description = "The color to fill blocks"
             default = rgba(0, 255, 255, 30)
-            shouldShow {
-                it["overlayEnabled"] == true && it["fillBlockOverlay"] == true
-            }
+            shouldShow { settings -> settings["overlayEnabled"] as Boolean && settings["fillBlockOverlay"] as Boolean }
         }
 
         toggle {
             configName = "chromaHighlight"
             name = "Chroma overlay"
             description = "Makes the outline chroma"
-            shouldShow { it["overlayEnabled"] == true }
+            shouldShow { settings -> settings["overlayEnabled"] as Boolean }
         }
 
         stepslider {
@@ -61,7 +59,7 @@ val config = NovaApi.createConfig("Stella", "stella"){
             step = 1
             default = 1
             shouldShow {
-                it["overlayEnabled"] == true && it["chromaHighlight"] == true
+                    settings -> settings["overlayEnabled"] as Boolean && settings["chromaHighlight"]as Boolean
             }
         }
 
@@ -73,7 +71,7 @@ val config = NovaApi.createConfig("Stella", "stella"){
             max = 5
             step = 1
             default = 3
-            shouldShow { it["overlayEnabled"] == true }
+            shouldShow { settings -> settings["overlayEnabled"] as Boolean }
         }
     }
 }

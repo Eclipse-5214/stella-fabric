@@ -17,7 +17,7 @@ open class Feature(
     private val areaLower = area?.lowercase()
     private val subareaLower = subarea?.lowercase()
     private val configValue: () -> Boolean = {
-        configName?.let { config.getConfigValue<Boolean>(it) ?: false } ?: true
+        configName?.let { config.getValue<Boolean>(it) } ?: true
     }
 
 
