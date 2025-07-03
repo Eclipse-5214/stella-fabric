@@ -1,7 +1,11 @@
 package co.stellarskys.stella.utils.render
 
+import co.stellarskys.stella.Stella
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.platform.DepthTestFunction
+import com.mojang.blaze3d.systems.RenderPass
+import com.mojang.blaze3d.systems.RenderSystem
+import com.mojang.blaze3d.textures.GpuTexture
 import com.mojang.blaze3d.vertex.VertexFormat
 import it.unimi.dsi.fastutil.doubles.Double2ObjectMap
 import it.unimi.dsi.fastutil.doubles.Double2ObjectOpenHashMap
@@ -9,6 +13,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext
 import net.minecraft.block.BlockState
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.gl.RenderPipelines
+import net.minecraft.client.gl.UniformType
 import net.minecraft.client.render.*
 import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.client.world.ClientWorld
@@ -20,6 +25,7 @@ import net.minecraft.util.math.Box
 import net.minecraft.util.math.Vec3d
 import java.awt.Color
 import java.util.OptionalDouble
+import java.util.OptionalInt
 import java.util.function.DoubleFunction
 
 object RenderHelper {
@@ -41,14 +47,21 @@ object RenderHelper {
         matrices.translate(-camera.x, -camera.y, -camera.z)
 
         val buffer = context.consumers()!!.getBuffer(
+            /*
             if (!depthCheck)
                 filledThroughWallsLayer else filledLayer
+             */
+            StellaRenderLayers.getChromaStandard()
         )
 
+        /*
         val r = color.red / 255f
         val g = color.green / 255f
         val b = color.blue / 255f
         val a = color.alpha / 255f
+         */
+
+        val (r,g,b,a) = listOf(1f,1f,1f,1f)
 
         val zFightingOffset = 0.001
         state.getOutlineShape(world, pos).forEachBox { minX, minY, minZ, maxX, maxY, maxZ ->
@@ -181,6 +194,9 @@ object RenderHelper {
             .build(false)
     )
 
+
+
+
     val filledThroughWallsLayer: RenderLayer.MultiPhase = RenderLayer.of(
         "filled_through_walls", RenderLayer.DEFAULT_BUFFER_SIZE, false, true,
         filledThroughWallsPipeline,
@@ -188,4 +204,5 @@ object RenderHelper {
             .layering(RenderPhase.VIEW_OFFSET_Z_LAYERING)
             .build(false)
     )
+
 }

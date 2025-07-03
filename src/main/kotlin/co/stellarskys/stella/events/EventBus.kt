@@ -16,10 +16,12 @@ import java.util.concurrent.ConcurrentHashMap
 
 object EventBus {
     val listeners = ConcurrentHashMap<Class<*>, MutableSet<Any>>()
+    var totalTicks = 0
 
     init {
         ClientTickEvents.END_CLIENT_TICK.register { client ->
             post(TickEvent())
+            totalTicks ++
         }
         ClientEntityEvents.ENTITY_LOAD.register { entity, _ ->
             post(EntityJoinEvent(entity))

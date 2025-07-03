@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.ModContainer
 import net.minecraft.client.MinecraftClient
+import net.minecraft.util.Identifier
 import java.util.concurrent.ConcurrentHashMap
 
 class Stella : ClientModInitializer {
@@ -87,6 +88,8 @@ class Stella : ClientModInitializer {
 		fun updateFeatures() {
 			features.forEach { it.update() }
 		}
+
+		fun getResource(path: String) = Identifier.of(NAMESPACE, path)
 
 		fun init() {}
 	}
