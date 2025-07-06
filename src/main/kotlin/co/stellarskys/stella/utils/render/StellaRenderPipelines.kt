@@ -56,6 +56,7 @@ object StellaRenderPipelines {
     val CHROMA_LINES: RenderPipeline = RenderPipelines.register(
         RenderPipeline.builder(RenderPipelines.RENDERTYPE_LINES_SNIPPET)
             .withLocation(Identifier.of(Stella.NAMESPACE, "chroma_lines"))
+            .withVertexFormat(VertexFormats.POSITION_COLOR, VertexFormat.DrawMode.DEBUG_LINES)
             .withVertexShader(ShaderPath("3d_chroma"))
             .withFragmentShader(ShaderPath("3d_chroma"))
             .withUniform("chromaSize",UniformType.FLOAT)

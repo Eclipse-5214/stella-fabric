@@ -5,13 +5,10 @@ import co.stellarskys.stella.Stella.Companion.mc
 import co.stellarskys.stella.events.BlockOutlineEvent
 import co.stellarskys.stella.features.Feature
 import co.stellarskys.stella.utils.config
-import co.stellarskys.stella.utils.render.RenderHelper
 import co.stellarskys.stella.utils.render.StellaRenderLayers
-import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.block.ShapeContext
 import net.minecraft.client.render.*
 import net.minecraft.world.EmptyBlockView
-import java.awt.Color
 
 object blockOverlay : Feature("overlayEnabled") {
     override fun initialize() {
@@ -23,18 +20,45 @@ object blockOverlay : Feature("overlayEnabled") {
             if (blockShape.isEmpty) return@register
 
             val camPos = camera.pos
-            val outlineColor: RGBA = config["blockHighlightColor"] as RGBA
-            val outlineWidth: Float = (config["overlayLineWidth"] as Int).toFloat()
+
+            val chroma = config["chromaHighlight"] as Boolean
+
+            val outlineColor = config["blockHighlightColor"] as RGBA
+            val outlineWidth = (config["overlayLineWidth"] as Int).toFloat()
+
+            val fillColor = config["blockFillColor"] as RGBA
+
+            event.cancel()
+
+            val x = blockPos.x - camPos.x
+            val y = blockPos.y - camPos.y
+            val z = blockPos.z - camPos.z
 
             VertexRendering.drawOutline(
                 event.WorldContext.matrixStack(),
-                consumers.getBuffer(StellaRenderLayers.getChromaLines(5.0)),
+                consumers.getBuffer(if(chroma) StellaRenderLayers.getChromaLines(5.0) else StellaRenderLayers.getLines(5.0)),
                 blockShape,
-                blockPos.x - camPos.x,
-                blockPos.y - camPos.y,
-                blockPos.z - camPos.z,
+                x, y, z,
                 outlineColor.toColorInt()
             )
+
+            if (config["fillBlockOverlay"] as Boolean) {
+                val (rRaw, gRaw, bRaw, aRaw) = fillColor
+                val r = rRaw / 255f
+                val g = gRaw / 255f
+                val b = bRaw / 255f
+                val a = aRaw / 255f
+
+                blockShape.forEachBox { minX, minY, minZ, maxX, maxY, maxZ ->
+                    VertexRendering.drawFilledBox(
+                        event.WorldContext.matrixStack(),
+                        consumers.getBuffer(if (chroma ) StellaRenderLayers.CHROMA_3D else StellaRenderLayers.FILLED),
+                        x + minX, y + minY, z + minZ,
+                        x + maxX, y + maxY, z + maxZ,
+                        r,g,b,a
+                    )
+                }
+            }
         }
     }
 }
