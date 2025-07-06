@@ -6,6 +6,7 @@ import co.stellarskys.stella.events.BlockOutlineEvent
 import co.stellarskys.stella.features.Feature
 import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.render.RenderHelper
+import co.stellarskys.stella.utils.render.StellaRenderLayers
 import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.block.ShapeContext
 import net.minecraft.client.render.*
@@ -18,53 +19,22 @@ object blockOverlay : Feature("overlayEnabled") {
             val blockPos = event.blockContext.blockPos()
             val consumers = event.WorldContext.consumers() ?: return@register
             val camera = mc.gameRenderer.camera
-            val blockShape = event.blockContext.blockState().getOutlineShape(
-                EmptyBlockView.INSTANCE, blockPos, ShapeContext.of(camera.focusedEntity)
-            )
+            val blockShape = event.blockContext.blockState().getOutlineShape(EmptyBlockView.INSTANCE, blockPos, ShapeContext.of(camera.focusedEntity))
             if (blockShape.isEmpty) return@register
 
             val camPos = camera.pos
-            RenderSystem.lineWidth((config["overlayLineWidth"] as Int).toFloat())
-            event.cancel()
+            val outlineColor: RGBA = config["blockHighlightColor"] as RGBA
+            val outlineWidth: Float = (config["overlayLineWidth"] as Int).toFloat()
 
-            if(!(config["chromaHighlight"] as Boolean)) {
-                VertexRendering.drawOutline(
-                    event.WorldContext.matrixStack(),
-                    consumers.getBuffer(RenderLayer.getLines()),
-                    blockShape,
-                    blockPos.x - camPos.x,
-                    blockPos.y - camPos.y,
-                    blockPos.z - camPos.z,
-                    (config["blockHighlightColor"] as RGBA).toColorInt()
-                )
-
-                if (config["fillBlockOverlay"] as Boolean) {
-                    RenderHelper.renderBlock(
-                        event.WorldContext,
-                        (config["blockFillColor"] as RGBA).toColor()
-                    )
-                }
-            } else {
-                VertexRendering.drawOutline(
-                    event.WorldContext.matrixStack(),
-                    consumers.getBuffer(RenderLayer.getLines()),
-                    blockShape,
-                    blockPos.x - camPos.x,
-                    blockPos.y - camPos.y,
-                    blockPos.z - camPos.z,
-                    0xFFFFFFFF.toInt()
-                )
-
-                val color = Color(255, 255, 255, (config["blockFillColor"] as RGBA).toColor().getAlpha());
-
-                if (config["fillBlockOverlay"] as Boolean) {
-                    RenderHelper.renderBlock(
-                        event.WorldContext,
-                        Color.WHITE
-                    )
-                }
-            }
-
+            VertexRendering.drawOutline(
+                event.WorldContext.matrixStack(),
+                consumers.getBuffer(StellaRenderLayers.getChromaLines(5.0)),
+                blockShape,
+                blockPos.x - camPos.x,
+                blockPos.y - camPos.y,
+                blockPos.z - camPos.z,
+                outlineColor.toColorInt()
+            )
         }
     }
 }

@@ -1,4 +1,4 @@
-package co.stellarskys.stella.utils.render
+package co.stellarskys.stella.utils.render.layers
 
 import co.stellarskys.stella.events.EventBus
 import co.stellarskys.stella.mixin.accessors.AccessorMinecraft
@@ -7,15 +7,15 @@ import com.mojang.blaze3d.buffers.GpuBuffer
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.VertexFormat
-import java.util.OptionalDouble
-import java.util.OptionalInt
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.render.BuiltBuffer
-import net.minecraft.client.render.RenderLayer.MultiPhase
+import net.minecraft.client.render.RenderLayer
+import java.util.OptionalDouble
+import java.util.OptionalInt
 
 class ChromaRenderLayer(
     name: String, size: Int, hasCrumbling: Boolean, translucent: Boolean, pipeline: RenderPipeline, phases: MultiPhaseParameters,
-) : MultiPhase(name, size, hasCrumbling, translucent, pipeline, phases ) {
+) : RenderLayer.MultiPhase(name, size, hasCrumbling, translucent, pipeline, phases ) {
 
     override fun draw(buffer: BuiltBuffer) {
         val renderPipeline = this.pipeline

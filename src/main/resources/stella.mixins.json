@@ -3,7 +3,9 @@
 	"package": "co.stellarskys.stella.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"accessors.AccessorMinecraft"
+		"accessors.AccessorMinecraft",
+		"accessors.FrustumInvoker",
+		"accessors.WorldRendererAccessor"
 	],
 	"client": [],
 	"injectors": {

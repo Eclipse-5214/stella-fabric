@@ -1,10 +1,14 @@
 package co.stellarskys.stella.utils
 
+import co.stellarskys.stella.Stella
+import net.minecraft.block.Block
+import net.minecraft.block.BlockState
 import net.minecraft.client.MinecraftClient
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.particle.SimpleParticleType
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
+import net.minecraft.util.math.BlockPos
 
 object Utils {
     private val emoteRegex = "[^\\u0000-\\u007F]".toRegex()
@@ -66,4 +70,16 @@ object Utils {
     }
 
     inline fun <reified R> Any.getField(name: String): R = javaClass.getDeclaredField(name).apply { isAccessible = true }[this] as R
+}
+
+object WorldUtils {
+    fun getBlockStateAt(x: Int, y: Int, z: Int): BlockState? {
+        val world = Stella.mc.world ?: return null
+        return world.getBlockState(BlockPos(x, y, z))
+    }
+
+    fun getBlockAt(x: Int, y: Int, z: Int): Block? {
+        val block = getBlockStateAt(x, y, z)?.block ?: return null
+        return block
+    }
 }
