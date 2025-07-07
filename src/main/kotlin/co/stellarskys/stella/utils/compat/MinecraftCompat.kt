@@ -1,4 +1,4 @@
-package co.stellarskys.stella.utils
+package co.stellarskys.stella.utils.compat
 
 import net.minecraft.client.MinecraftClient
 import net.minecraft.client.network.ClientPlayerEntity

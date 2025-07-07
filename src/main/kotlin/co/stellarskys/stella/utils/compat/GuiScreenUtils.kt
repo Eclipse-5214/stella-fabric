@@ -1,8 +1,6 @@
-package co.stellarskys.stella.utils
-
+package co.stellarskys.stella.utils.compat
 
 import net.minecraft.client.MinecraftClient
-
 
 object GuiScreenUtils {
 

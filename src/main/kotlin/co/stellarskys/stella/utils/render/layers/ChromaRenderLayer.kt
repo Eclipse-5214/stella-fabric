@@ -2,7 +2,7 @@ package co.stellarskys.stella.utils.render.layers
 
 import co.stellarskys.stella.events.EventBus
 import co.stellarskys.stella.mixin.accessors.AccessorMinecraft
-import co.stellarskys.stella.utils.GuiScreenUtils
+import co.stellarskys.stella.utils.compat.GuiScreenUtils
 import com.mojang.blaze3d.buffers.GpuBuffer
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import com.mojang.blaze3d.systems.RenderSystem

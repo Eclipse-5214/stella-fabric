@@ -1,5 +1,10 @@
 package co.stellarskys.stella.utils
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import net.minecraft.client.MinecraftClient
 import net.minecraft.text.ClickEvent
 import net.minecraft.text.HoverEvent
@@ -7,10 +12,52 @@ import net.minecraft.text.MutableText
 import net.minecraft.text.Style
 import net.minecraft.text.Text
 
+import java.util.concurrent.ConcurrentLinkedQueue
+
 object ChatUtils {
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val queue = ConcurrentLinkedQueue<String>()
+    private var lastSent = 0L
+    private var processing = false
+
     fun chat(message: String) {
         val player = MinecraftClient.getInstance().player ?: return
-        player.networkHandler.sendChatMessage(message)
+        val now = System.currentTimeMillis()
+
+        if (now - lastSent >= 100 && !processing) {
+            player.networkHandler.sendChatMessage(message)
+            lastSent = now
+        } else {
+            queue.offer(message)
+            if (!processing) processQueue()
+        }
+    }
+
+    private fun processQueue() {
+        processing = true
+        scope.launch {
+            while (queue.isNotEmpty()) {
+                val elapsed = System.currentTimeMillis() - lastSent
+                if (elapsed < 100) {
+                    delay(100 - elapsed)
+                }
+
+                queue.poll()?.let { message ->
+                    val player = MinecraftClient.getInstance().player
+                    if (player != null) {
+                        player.networkHandler.sendChatMessage(message)
+                        lastSent = System.currentTimeMillis()
+                    }
+                }
+            }
+            processing = false
+        }
+    }
+
+    fun clientCommand(command: String) {
+        val player = MinecraftClient.getInstance().player ?: return
+        val cmd = if (command.startsWith("/")) command else "/$command"
+        player.networkHandler.sendChatCommand(cmd)
     }
 
     fun command(command: String) {
@@ -83,5 +130,51 @@ object ChatUtils {
         } catch (e: NumberFormatException) {
             number
         }
+    }
+
+    fun toLegacyString(text: Text?): String {
+        if (text == null) return ""
+        val builder = StringBuilder()
+
+        fun append(component: Text?) {
+            component!!.style.color?.let { color ->
+                builder.append("§${
+                    when(color.name) {
+                        "black" -> "0"
+                        "dark_blue" -> "1"
+                        "dark_green" -> "2"
+                        "dark_aqua" -> "3"
+                        "dark_red" -> "4"
+                        "dark_purple" -> "5"
+                        "gold" -> "6"
+                        "gray" -> "7"
+                        "dark_gray" -> "8"
+                        "blue" -> "9"
+                        "green" -> "a"
+                        "aqua" -> "b"
+                        "red" -> "c"
+                        "light_purple" -> "d"
+                        "yellow" -> "e"
+                        "white" -> "f"
+                        else -> "f"
+                    }
+                }")
+            }
+
+            with(component.style) {
+                if (isBold) builder.append("§l")
+                if (isItalic) builder.append("§o")
+                if (isUnderlined) builder.append("§n")
+                if (isStrikethrough) builder.append("§m")
+                if (isObfuscated) builder.append("§k")
+            }
+
+            val content = component.string
+            if (content.isNotEmpty() && component.siblings.isEmpty()) builder.append(content)
+            component.siblings.forEach { append(it) }
+        }
+
+        append(text)
+        return builder.toString()
     }
 }

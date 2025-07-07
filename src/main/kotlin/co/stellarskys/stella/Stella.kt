@@ -4,6 +4,8 @@ import co.stellarskys.stella.events.*
 import co.stellarskys.stella.features.Feature
 import co.stellarskys.stella.features.FeatureManager
 import co.stellarskys.stella.utils.ChatUtils
+import co.stellarskys.stella.utils.LocalStore
+import co.stellarskys.stella.utils.LocalStores
 import co.stellarskys.stella.utils.config
 import com.mojang.brigadier.Command
 import net.fabricmc.api.ClientModInitializer
@@ -14,6 +16,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.loader.api.FabricLoader
 import net.fabricmc.loader.api.ModContainer
 import net.minecraft.client.MinecraftClient
+import net.minecraft.client.gui.screen.ingame.InventoryScreen
 import net.minecraft.util.Identifier
 import java.util.concurrent.ConcurrentHashMap
 
@@ -23,6 +26,7 @@ class Stella : ClientModInitializer {
 	override fun onInitializeClient() {
 		init()
 		FeatureManager.init()
+		LocalStores.init()
 
 		ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
 			val cmd = Command<FabricClientCommandSource> { context ->
@@ -55,8 +59,19 @@ class Stella : ClientModInitializer {
 		}
 
 		// Event stuff
-		EventBus.register<AreaEvent> ({ updateFeatures() })
-		EventBus.register<SubAreaEvent> ({ updateFeatures() })
+		EventBus.register<GuiEvent.Open> ({ event ->
+			if (event.screen is InventoryScreen) isInInventory = true
+		})
+
+		EventBus.register<GuiEvent.Close> ({
+			isInInventory = false
+		})
+
+		EventBus.register<AreaEvent.Main> ({ updateFeatures() })
+		EventBus.register<AreaEvent.Sub> ({ updateFeatures() })
+
+		val test = LocalStore("general","./config/stella/test.json")
+		test["hi"] = false
 
 	}
 
@@ -71,7 +86,6 @@ class Stella : ClientModInitializer {
 		val INSTANCE: Stella? = null
 
 		var isInInventory = false
-
 
 		fun addFeature(feature: Feature) {
 			features.add(feature)

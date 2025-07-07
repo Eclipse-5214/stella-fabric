@@ -1,28 +1,26 @@
-package co.stellarskys.stella.utils
+package co.stellarskys.stella.utils.compat
 
-import org.lwjgl.glfw.GLFW
-import org.lwjgl.glfw.GLFW.glfwGetMouseButton
-import org.lwjgl.glfw.GLFW.glfwGetCursorPos
 import net.minecraft.client.MinecraftClient
+import org.lwjgl.glfw.GLFW
 
 object MouseCompat {
     private val window: Long
         get() = MinecraftClient.getInstance().window.handle
 
     fun isButtonDown(button: Int): Boolean =
-        glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS
+        GLFW.glfwGetMouseButton(window, button) == GLFW.GLFW_PRESS
 
     fun getX(): Double {
         val x = DoubleArray(1)
         val y = DoubleArray(1)
-        glfwGetCursorPos(window, x, y)
+        GLFW.glfwGetCursorPos(window, x, y)
         return x[0]
     }
 
     fun getY(): Double {
         val x = DoubleArray(1)
         val y = DoubleArray(1)
-        glfwGetCursorPos(window, x, y)
+        GLFW.glfwGetCursorPos(window, x, y)
         return y[0]
     }
 
