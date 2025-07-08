@@ -2,40 +2,47 @@ package co.stellarskys.stella.utils.skyblock.dungeons
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.utils.WorldUtils
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import net.minecraft.util.Identifier
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import net.minecraft.registry.Registries
-import net.minecraft.registry.Registry
-import net.minecraft.util.math.BlockPos
-import net.minecraft.world.World
+import net.minecraft.resource.ResourceManager
 import java.io.InputStreamReader
-import kotlin.math.floor
 
-fun getRoomData(): JsonObject? {
-    val roomData = Identifier.of(Stella.NAMESPACE, "/dungeons/roomdata.json")
+object RoomRegistry {
+    private val gson = Gson()
+    private val byCore = mutableMapOf<Int, RoomMetadata>()
+    private val allRooms = mutableListOf<RoomMetadata>()
 
-    val resourceManager = Stella.mc.resourceManager
+    fun load(resourceManager: ResourceManager) {
+        val id = Identifier.of(Stella.NAMESPACE, "dungeons/roomdata.json")
+        val optional = resourceManager.getResource(id)
+        val resource = optional.orElse(null) ?: return
 
-    return try {
-        resourceManager.getResource(roomData).get().inputStream.use { stream ->
-            val reader = InputStreamReader(stream)
-            JsonParser.parseReader(reader).asJsonObject
+        val reader = InputStreamReader(resource.inputStream)
+        val type = object : TypeToken<List<RoomMetadata>>() {}.type
+        val rooms = gson.fromJson<List<RoomMetadata>>(reader, type)
+        allRooms += rooms
+
+        for (room in rooms) {
+            for (core in room.cores) {
+                byCore[core] = room
+            }
         }
-    } catch (e: Exception) {
-        null
     }
+
+    fun getByCore(core: Int): RoomMetadata? = byCore[core]
+    fun getAll(): List<RoomMetadata> = allRooms
 }
 
-val cornerStart = Pair(-200,-200)
-val cornerEnd = Pair(-10,-10)
+// Dungeon grid constants
+val cornerStart = Pair(-200, -200)
+val cornerEnd   = Pair(-10, -10)
 
 const val dungeonRoomSize = 31
 const val dungeonDoorSize = 1
 const val roomDoorCombinedSize = dungeonRoomSize + dungeonDoorSize
-
-val halfRoomSize = floor(dungeonRoomSize.toDouble() / 2).toInt()
-val halfCombinedSize = floor(roomDoorCombinedSize.toDouble() / 2).toInt()
+const val halfRoomSize = dungeonRoomSize / 2
+const val halfCombinedSize = roomDoorCombinedSize / 2
 
 val directions = listOf(
     listOf(halfCombinedSize, 0, 1, 0),
@@ -46,154 +53,87 @@ val directions = listOf(
 
 val defaultMapSize = Pair(125, 125)
 
-fun getHighestY(x: Int, z: Int): Int {
-    for (y in 256 downTo 1) {
-        val block = WorldUtils.getBlockAt(x, y, z)
-        val id = Registries.BLOCK.getRawId(block)
-        if (id == 0 || id == 41) continue
-        return y
-    }
-    return 0
+fun hashCode(s: String): Int {
+    return s.fold(0) { acc, c -> ((acc shl 5) - acc + c.code) } and 0xFFFFFFFF.toInt()
 }
 
-fun hashCode(str: String): Int =
-    str.fold(0) { acc, c -> (acc shl 5) - acc + c.code } and 0xFFFFFFFF.toInt()
-
-fun getScanCoords(): List<List<Int>> {
-    val coords = mutableListOf<List<Int>>()
-    for (z in 0..<11) {
-        for (x in 0..<11) {
-            if (x % 2 == 1 && z % 2 == 1) continue
-            val rx = cornerStart.first + halfRoomSize + x * halfCombinedSize
-            val rz = cornerStart.second + halfRoomSize + z * halfCombinedSize
-            coords.add(listOf(x, z, rx, rz))
-        }
-    }
-    return coords
-}
-
-fun getCore(x: Int, z: Int): Int {
+fun getCore(x: Int, z: Int): Int? {
     val ids = buildString {
         for (y in 140 downTo 12) {
-            val block = WorldUtils.getBlockAt(x, y, z)
-            val id = Registries.BLOCK.getRawId(block)
-            append(if (id == 101 || id == 54) "0" else id)
+            val id = WorldUtils.getBlockNumericId(x, y, z)
+            append(if (id == 101 || id == 54) "0" else id.toString())
         }
     }
     return hashCode(ids)
 }
 
-fun componentToRealCoords(coord: Pair<Int, Int>, includeDoors: Boolean = false): Pair<Int, Int> {
-    val (x, z) = coord
-    val (x0, z0) = cornerStart
-    return if (includeDoors) {
-        Pair(
-            x0 + halfRoomSize + halfCombinedSize * x,
-            z0 + halfRoomSize + halfCombinedSize * z
-        )
-    } else {
-        Pair(
-            x0 + halfRoomSize + roomDoorCombinedSize * x,
-            z0 + halfRoomSize + roomDoorCombinedSize * z
-        )
+fun getHighestY(x: Int, z: Int): Int? {
+    for (y in 255 downTo 0) {
+        val id = WorldUtils.getBlockNumericId(x, y, z)
+        if (id != 0 && id != 41) return y
     }
+    return null
 }
 
-fun isChunkLoaded(x: Int, y: Int, z: Int): Boolean {
-    val world = Stella.mc.world ?: return false
-    val chunkPos = BlockPos(x, y, z)
-    return world.getChunk(chunkPos) != null
+fun componentToRealCoords(x: Int, z: Int, includeDoors: Boolean = false): Pair<Int, Int> {
+    val (x0, z0) = cornerStart
+    val offset = if (includeDoors) halfCombinedSize else roomDoorCombinedSize
+    return Pair(x0 + halfRoomSize + offset * x, z0 + halfRoomSize + offset * z)
 }
 
-fun realCoordToComponent(coord: Pair<Int, Int>, includeDoors: Boolean = false): Pair<Int, Int> {
-    val (x, z) = coord
+fun realCoordToComponent(x: Int, z: Int, includeDoors: Boolean = false): Pair<Int, Int> {
     val (x0, z0) = cornerStart
     val size = if (includeDoors) halfCombinedSize else roomDoorCombinedSize
-    val s = 4 + ((size - 16) shr 4)
-
-    return Pair(
-        ((x - x0 + 0.5).toInt()) shr s,
-        ((z - z0 + 0.5).toInt()) shr s
-    )
+    val shift = 4 + ((size - 16) shr 4)
+    return Pair(((x - x0 + 0.5).toInt() shr shift), ((z - z0 + 0.5).toInt() shr shift))
 }
 
-enum class DoorType(val id: Int) {
-    NORMAL(0),
-    WITHER(1),
-    BLOOD(2),
-    ENTRANCE(3);
-}
-
-enum class ClearType(val id: Int) {
-    MOB(0),
-    MINIBOSS(1);
-}
-
-enum class Checkmark(val id: Int) {
-    NONE(0),
-    WHITE(1),
-    GREEN(2),
-    FAILED(3),
-    UNEXPLORED(4);
-}
-
-enum class RoomType(val id: Int) {
-    NORMAL(0),
-    PUZZLE(1),
-    TRAP(2),
-    YELLOW(3),
-    BLOOD(4),
-    FAIRY(5),
-    RARE(6),
-    ENTRANCE(7),
-    UNKNOWN(8);
-
-    companion object {
-        private val nameMap = mapOf(
-            "normal" to NORMAL,
-            "puzzle" to PUZZLE,
-            "trap" to TRAP,
-            "yellow" to YELLOW,
-            "blood" to BLOOD,
-            "fairy" to FAIRY,
-            "rare" to RARE,
-            "entrance" to ENTRANCE
-        )
-
-        fun fromString(name: String): RoomType =
-            nameMap[name.lowercase()] ?: UNKNOWN
+fun rotateCoords(pos: Triple<Int, Int, Int>, degree: Int): Triple<Int, Int, Int> {
+    val d = (degree + 360) % 360
+    return when (d) {
+        0   -> pos
+        90  -> Triple(pos.third, pos.second, -pos.first)
+        180 -> Triple(-pos.first, pos.second, -pos.third)
+        270 -> Triple(-pos.third, pos.second, pos.first)
+        else -> pos
     }
 }
 
-fun rotateCoords(pos: List<Double>, degree: Int): List<Double> {
-    val (x, y, z) = pos
-    val normalized = (degree % 360 + 360) % 360
+fun getRoomShape(comps: List<Pair<Int, Int>>): String {
+    val count = comps.size
+    val xs = comps.map { it.first }.toSet()
+    val zs = comps.map { it.second }.toSet()
 
-    return when (normalized) {
-        0 -> listOf(x, y, z)
-        90 -> listOf(z, y, -x)
-        180 -> listOf(-x, y, -z)
-        270 -> listOf(-z, y, x)
-        else -> listOf(x, y, z) // fallback if angle is unexpected
+    return when {
+        count == 1 -> "1x1"
+        count == 2 -> "1x2"
+        count == 3 -> if (xs.size == 3 || zs.size == 3) "1x3" else "L"
+        count == 4 -> if (xs.size == 1 || zs.size == 1) "1x4" else "2x2"
+        else       -> "Unknown"
     }
 }
 
-fun getRoomShape(components: List<Pair<Int, Int>>?): String {
-    if (components.isNullOrEmpty() || components.size > 4) return "Unknown"
+enum class DoorType { NORMAL, WITHER, BLOOD, ENTRANCE }
+enum class ClearType { MOB, MINIBOSS }
+enum class Checkmark { NONE, WHITE, GREEN, FAILED, UNEXPLORED }
 
-    val xs = components.map { it.first }.toSet()
-    val zs = components.map { it.second }.toSet()
-
-    return when (components.size) {
-        1 -> "1x1"
-        2 -> "1x2"
-        4 -> if (xs.size == 1 || zs.size == 1) "1x4" else "2x2"
-        3 -> if (xs.size == 3 || zs.size == 3) "1x3" else "L"
-        else -> "Unknown"
-    }
+enum class RoomType {
+    NORMAL, PUZZLE, TRAP, YELLOW, BLOOD, FAIRY, RARE, ENTRANCE, UNKNOWN
 }
 
-val MapColorToRoomType: Map<Int, RoomType> = mapOf(
+val roomTypeMap = mapOf(
+    "mobs" to RoomType.NORMAL,
+    "miniboss" to RoomType.NORMAL,
+    "puzzle" to RoomType.PUZZLE,
+    "trap" to RoomType.TRAP,
+    "gold" to RoomType.YELLOW,
+    "blood" to RoomType.BLOOD,
+    "fairy" to RoomType.FAIRY,
+    "rare" to RoomType.RARE,
+    "spawn" to RoomType.ENTRANCE
+)
+
+val mapColorToRoomType = mapOf(
     18 to RoomType.BLOOD,
     30 to RoomType.ENTRANCE,
     63 to RoomType.NORMAL,
@@ -202,3 +142,26 @@ val MapColorToRoomType: Map<Int, RoomType> = mapOf(
     74 to RoomType.YELLOW,
     66 to RoomType.PUZZLE
 )
+
+fun getScanCoords(): List<Triple<Int, Int, Pair<Int, Int>>> {
+    val coords = mutableListOf<Triple<Int, Int, Pair<Int, Int>>>()
+
+    for (z in 0..<11) {
+        for (x in 0..<11) {
+            if (x % 2 == 1 && z % 2 == 1) continue
+
+            val rx = cornerStart.first + halfRoomSize + x * halfCombinedSize
+            val rz = cornerStart.second + halfRoomSize + z * halfCombinedSize
+            coords += Triple(x, z, Pair(rx, rz))
+        }
+    }
+
+    return coords
+}
+
+fun isChunkLoaded(x: Int, y: Int, z: Int): Boolean {
+    val world = Stella.mc.world ?: return false
+    val chunkX = x shr 4
+    val chunkZ = z shr 4
+    return world.isChunkLoaded(chunkX, chunkZ)
+}

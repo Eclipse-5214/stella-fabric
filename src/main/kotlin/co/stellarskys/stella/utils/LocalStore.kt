@@ -31,11 +31,10 @@ object LocalStores {
         })
 
         EventBus.register<TickEvent.Client>({
+            val now = System.currentTimeMillis()
             instances.forEach { store ->
-                val lastBackup = store["lastBackup"] as? Long ?: 0L
-                val now = System.currentTimeMillis()
-                if (now - lastBackup > 10 * 60 * 1000) {
-                    store["lastBackup"] = now
+                if (store.shouldBackup(now)) {
+                    store.markBackup(now)
                     store.saveBackup()
                 }
             }
@@ -50,7 +49,7 @@ class LocalStore(
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
     private val file = Paths.get(filePath)
-
+    private var lastBackupTimestamp: Long = 0L
 
     init {
         val loaded = load()
@@ -78,6 +77,14 @@ class LocalStore(
         Files.newBufferedWriter(backup).use {
             gson.toJson(this, it)
         }
+    }
+
+    fun shouldBackup(now: Long = System.currentTimeMillis()): Boolean {
+        return now - lastBackupTimestamp > 10 * 60 * 1000
+    }
+
+    fun markBackup(now: Long = System.currentTimeMillis()) {
+        lastBackupTimestamp = now
     }
 }
 

@@ -6,6 +6,7 @@ import net.minecraft.block.BlockState
 import net.minecraft.client.MinecraftClient
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.particle.SimpleParticleType
+import net.minecraft.registry.Registries
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
 import net.minecraft.util.math.BlockPos
@@ -81,5 +82,10 @@ object WorldUtils {
     fun getBlockAt(x: Int, y: Int, z: Int): Block? {
         val block = getBlockStateAt(x, y, z)?.block ?: return null
         return block
+    }
+
+    fun getBlockNumericId(x: Int, y: Int, z: Int): Int {
+        val block = getBlockAt(x, y, z) ?: return 0
+        return Registries.BLOCK.getRawId(block)
     }
 }

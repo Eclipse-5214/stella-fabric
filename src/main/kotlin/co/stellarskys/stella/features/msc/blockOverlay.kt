@@ -2,7 +2,7 @@ package co.stellarskys.stella.features.msc
 
 import co.stellarskys.novaconfig.RGBA
 import co.stellarskys.stella.Stella.Companion.mc
-import co.stellarskys.stella.events.BlockOutlineEvent
+import co.stellarskys.stella.events.RenderEvent.BlockOutline
 import co.stellarskys.stella.features.Feature
 import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.render.StellaRenderLayers
@@ -12,9 +12,9 @@ import net.minecraft.world.EmptyBlockView
 
 object blockOverlay : Feature("overlayEnabled") {
     override fun initialize() {
-        register<BlockOutlineEvent> { event ->
+        register<BlockOutline> { event ->
             val blockPos = event.blockContext.blockPos()
-            val consumers = event.WorldContext.consumers() ?: return@register
+            val consumers = event.worldContext.consumers() ?: return@register
             val camera = mc.gameRenderer.camera
             val blockShape = event.blockContext.blockState().getOutlineShape(EmptyBlockView.INSTANCE, blockPos, ShapeContext.of(camera.focusedEntity))
             if (blockShape.isEmpty) return@register
@@ -35,7 +35,7 @@ object blockOverlay : Feature("overlayEnabled") {
             val z = blockPos.z - camPos.z
 
             VertexRendering.drawOutline(
-                event.WorldContext.matrixStack(),
+                event.worldContext.matrixStack(),
                 consumers.getBuffer(if(chroma) StellaRenderLayers.getChromaLines(5.0) else StellaRenderLayers.getLines(5.0)),
                 blockShape,
                 x, y, z,
@@ -51,7 +51,7 @@ object blockOverlay : Feature("overlayEnabled") {
 
                 blockShape.forEachBox { minX, minY, minZ, maxX, maxY, maxZ ->
                     VertexRendering.drawFilledBox(
-                        event.WorldContext.matrixStack(),
+                        event.worldContext.matrixStack(),
                         consumers.getBuffer(if (chroma ) StellaRenderLayers.CHROMA_3D else StellaRenderLayers.FILLED),
                         x + minX, y + minY, z + minZ,
                         x + maxX, y + maxY, z + maxZ,

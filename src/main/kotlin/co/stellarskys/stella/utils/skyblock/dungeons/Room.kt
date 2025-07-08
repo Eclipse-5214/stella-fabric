@@ -1,180 +1,183 @@
 package co.stellarskys.stella.utils.skyblock.dungeons
 
-import co.stellarskys.stella.Stella
 import co.stellarskys.stella.utils.WorldUtils
-import com.google.gson.JsonObject
 import net.minecraft.block.Blocks
-import net.minecraft.registry.Registries
-import net.minecraft.util.math.BlockPos
-import kotlin.math.floor
 
+data class RoomMetadata(
+    val name: String,
+    val type: String,
+    val shape: String,
+    val doors: String? = null,
+    val secrets: Int = 0,
+    val crypts: Int = 0,
+    val reviveStones: Int = 0,
+    val journals: Int = 0,
+    val spiders: Boolean = false,
+    val soul: Boolean = false,
+    val cores: List<Int> = emptyList(),
+    val id: List<String> = emptyList(),
+
+    val secretDetails: SecretDetails = SecretDetails(),
+    val secretCoords: Map<String, List<List<Int>>> = emptyMap()
+)
+
+data class SecretDetails(
+    val wither: Int = 0,
+    val redstoneKey: Int = 0,
+    val bat: Int = 0,
+    val item: Int = 0,
+    val chest: Int = 0
+)
 
 class Room(
-    comp: Any, // Replace `Any` with actual type of `comp`
-    var height: Int?
+    initialComponent: Pair<Int, Int>,
+    var height: Int? = null
 ) {
-    private val comps = mutableListOf<Pair<Int, Int>>()
-    private val rcomps = mutableListOf<Pair<Int, Int>>()
-    private var cores = mutableListOf<Any>()
-    private val roomsJson = getRoomData()
+    val components = mutableListOf<Pair<Int, Int>>()
+    val realComponents = mutableListOf<Pair<Int, Int>>()
+    val cores = mutableListOf<Int>()
 
-    var explored: Boolean = false
+    var metadata: RoomMetadata? = null
+    var roomData: RoomMetadata? = null
+    var shape: String = "1x1"
+    var explored = false
+    var cleared = false
+    var checkmark = Checkmark.UNEXPLORED
+    var players = mutableSetOf<String>()
+
     var name: String? = null
-    var corner: List<Double>? = null
+    var corner: Triple<Double, Double, Double>? = null
     var rotation: Int? = null
     var type: RoomType = RoomType.UNKNOWN
-    var clear: ClearType? = null
-    var roomData: JsonObject? = null
-    var shape: String = "1x1"
+    var clearType: ClearType? = null
     var secrets: Int = 0
     var crypts: Int = 0
-    var checkmark: Checkmark = Checkmark.UNEXPLORED
-    val players = mutableSetOf<DungeonPlayer>()
 
-    fun loadFromData(roomData: JsonObject) {
-        this.roomData = roomData
-
-        this.name = roomData.get("name")?.asString
-        val typeKey = roomData.get("type")?.asString
-        this.type = typeKey?.let { RoomType.fromString(it) } ?: RoomType.NORMAL
-
-        this.secrets = roomData.get("secrets")?.asInt ?: 0
-
-        val coresJson = roomData.getAsJsonArray("cores")
-        this.cores = coresJson?.mapNotNull { it.asString }?.toMutableList() ?: mutableListOf()
-
-        val clearType = roomData.get("clear")?.asString
-        this.clear = when (clearType) {
-            "mob" -> ClearType.MOB
-            "miniboss" -> ClearType.MINIBOSS
-            else -> null
-        }
-
-        this.crypts = roomData.get("crypts")?.asInt ?: 0
+    init {
+        addComponents(listOf(initialComponent))
     }
-
-    fun loadFromCore(core: Int): Boolean {
-        val roomsArray = roomsJson?.getAsJsonArray("rooms") ?: return false
-
-        for (entry in roomsArray) {
-            val obj = entry.asJsonObject
-            val cores = obj.getAsJsonArray("cores")?.mapNotNull { it.asString } ?: continue
-            if (core.toString() in cores) {
-                loadFromData(obj)
-                return true
-            }
-        }
-        return false
-    }
-
-    fun loadFromMapColor(color: Int): Room {
-        type = MapColorToRoomType[color] ?: RoomType.NORMAL
-
-        if (type == RoomType.BLOOD) {
-            val data = roomsJson?.getAsJsonArray("rooms")?.find {
-                it.asJsonObject.get("name")?.asString == "Blood"
-            }?.asJsonObject
-
-            data?.let { loadFromData(it) }
-        }
-
-        if (type == RoomType.ENTRANCE) {
-            val data = roomsJson?.getAsJsonArray("rooms")?.find {
-                it.asJsonObject.get("name")?.asString == "Entrance"
-            }?.asJsonObject
-
-            data?.let { loadFromData(it) }
-        }
-
-        return this
-    }
-
-    fun scan():Room {
-        for ((x, z) in rcomps) {
-            if (height == null) {
-                height = getHighestY(x, z)
-            }
-            val core = getCore(x, z)
-            loadFromCore(core) // assumes roomsJson is passed or available
-        }
-
-        return this
-    }
-
-    fun hasComponent(x: Int, z: Int): Boolean =
-        comps.any { (cx, cz) -> cx == x && cz == z }
 
     fun addComponent(comp: Pair<Int, Int>, update: Boolean = true): Room {
-        if (hasComponent(comp.first, comp.second)) return this
-        comps.add(comp)
+        if (!components.contains(comp)) components += comp
         if (update) update()
         return this
     }
 
-    fun addComponents(newComps: List<Pair<Int, Int>>): Room {
-        newComps.forEach { addComponent(it, update = false) }
+    fun addComponents(comps: List<Pair<Int, Int>>): Room {
+        comps.forEach { addComponent(it, update = false) }
         update()
         return this
     }
 
+    fun hasComponent(x: Int, z: Int): Boolean {
+        return components.any { it.first == x && it.second == z }
+    }
+
     fun update() {
-        comps.sortWith(compareBy({ it.first }, { it.second }))
-        rcomps.clear()
-        rcomps.addAll(comps.map { componentToRealCoords(it, false) })
+        components.sortWith(compareBy({ it.first }, { it.second }))
+        realComponents.clear()
+        realComponents += components.map { componentToRealCoords(it.first, it.second) }
         scan()
-        shape = getRoomShape(comps)
+        shape = getRoomShape(components)
         corner = null
         rotation = null
     }
 
-    fun findRotation() {
-        val y = height ?: return
+    fun scan(): Room {
+        for ((x, z) in realComponents) {
+            if (height == null) height = getHighestY(x, z)
+            val core = getCore(x, z) ?: continue
+            cores += core
+            loadFromCore(core)
+        }
+        return this
+    }
+
+    private fun loadFromCore(core: Int): Boolean {
+        val data = RoomRegistry.getByCore(core) ?: return false
+        loadFromData(data)
+        return true
+    }
+
+    fun loadFromData(data: RoomMetadata) {
+        metadata = data
+        roomData = data
+        name = data.name
+        type = roomTypeMap[data.type.lowercase()] ?: RoomType.NORMAL
+        secrets = data.secrets
+        crypts = data.crypts
+        clearType = when (data.type) {
+            "mob" -> ClearType.MOB
+            "miniboss" -> ClearType.MINIBOSS
+            else -> null
+        }
+    }
+
+    fun loadFromMapColor(color: Int): Room {
+        type = mapColorToRoomType[color] ?: RoomType.NORMAL
+        when (type) {
+            RoomType.BLOOD -> RoomRegistry.getAll().find { it.name == "Blood" }?.let { loadFromData(it) }
+            RoomType.ENTRANCE -> RoomRegistry.getAll().find { it.name == "Entrance" }?.let { loadFromData(it) }
+            else -> {}
+        }
+        return this
+    }
+
+    fun findRotation(): Room {
+        if (height == null) return this
 
         if (type == RoomType.FAIRY) {
             rotation = 0
-            val (x, z) = rcomps.firstOrNull() ?: return
-            corner = listOf(x - halfRoomSize + 0.5, y.toDouble(), z - halfRoomSize + 0.5)
-            return
+            val (x, z) = realComponents.first()
+            corner = Triple(x - halfRoomSize + 0.5, height!!.toDouble(), z - halfRoomSize + 0.5)
+            return this
         }
 
-        for ((x, z) in rcomps) {
-            for ((jdx, offset) in directions.withIndex()) {
-                val dx = offset[0]
-                val dz = offset[2]
+        val offsets = listOf(
+            Pair(-halfRoomSize, -halfRoomSize),
+            Pair(halfRoomSize, -halfRoomSize),
+            Pair(halfRoomSize, halfRoomSize),
+            Pair(-halfRoomSize, halfRoomSize)
+        )
+
+        for ((x, z) in realComponents) {
+            for ((jdx, offset) in offsets.withIndex()) {
+                val (dx, dz) = offset
                 val nx = x + dx
                 val nz = z + dz
 
-                if (!isChunkLoaded(nx, y, nz)) return
-
-                val state = WorldUtils.getBlockStateAt(nx, y,nz) ?: continue
-                val isBlueTerracotta = state.isOf(Blocks.BLUE_TERRACOTTA)
-
-                if (!isBlueTerracotta) continue
-
-                rotation = jdx * 90
-                corner = listOf(nx + 0.5, y.toDouble(), nz + 0.5)
-                return
+                if (!isChunkLoaded(nx, height!!, nz)) continue
+                val state = WorldUtils.getBlockStateAt(nx, height!!, nz) ?: continue
+                if (state.isOf(Blocks.BLUE_TERRACOTTA)) {
+                    rotation = jdx * 90
+                    corner = Triple(nx + 0.5, height!!.toDouble(), nz + 0.5)
+                    return this
+                }
             }
         }
+        return this
     }
 
-
-    fun fromPos(pos: List<Double>): List<Double>? {
-        val rot = rotation ?: return null
-        val c = corner ?: return null
-        val rel = pos.mapIndexed { idx, v -> floor(v - c[idx]) }
-        return rotateCoords(rel, rot)
+    fun fromWorldPos(pos: Triple<Double, Double, Double>): Triple<Int, Int, Int>? {
+        if (corner == null || rotation == null) return null
+        val rel = Triple(
+            (pos.first - corner!!.first).toInt(),
+            (pos.second - corner!!.second).toInt(),
+            (pos.third - corner!!.third).toInt()
+        )
+        return rotateCoords(rel, rotation!!)
     }
 
-    fun fromComp(comp: List<Double>): List<Double>? {
-        val rot = rotation ?: return null
-        val c = corner ?: return null
-        val rotated = rotateCoords(comp, (360 - rot) % 360)
-        return rotated.mapIndexed { idx, v -> floor(v + c[idx]) }
+    fun toWorldPos(local: Triple<Int, Int, Int>): Triple<Double, Double, Double>? {
+        if (corner == null || rotation == null) return null
+        val rotated = rotateCoords(local, 360 - rotation!!)
+        return Triple(
+            rotated.first + corner!!.first,
+            rotated.second + corner!!.second,
+            rotated.third + corner!!.third
+        )
     }
 
-
-    fun getRoomCoord(pos: List<Double>) = fromPos(pos)
-
-    fun getRealCoord(comp: List<Double>) = fromComp(comp)
+    fun getRoomCoord(pos: Triple<Double, Double, Double>) = fromWorldPos(pos)
+    fun getRealCoord(local: Triple<Int, Int, Int>) = toWorldPos(local)
 }
