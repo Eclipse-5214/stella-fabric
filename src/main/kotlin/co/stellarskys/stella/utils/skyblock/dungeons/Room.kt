@@ -37,11 +37,9 @@ class Room(
     val realComponents = mutableListOf<Pair<Int, Int>>()
     val cores = mutableListOf<Int>()
 
-    var metadata: RoomMetadata? = null
     var roomData: RoomMetadata? = null
     var shape: String = "1x1"
     var explored = false
-    var cleared = false
     var checkmark = Checkmark.UNEXPLORED
     var players = mutableSetOf<String>()
 
@@ -49,7 +47,7 @@ class Room(
     var corner: Triple<Double, Double, Double>? = null
     var rotation: Int? = null
     var type: RoomType = RoomType.UNKNOWN
-    var clearType: ClearType? = null
+    var clear: ClearType? = null
     var secrets: Int = 0
     var crypts: Int = 0
 
@@ -102,17 +100,21 @@ class Room(
     }
 
     fun loadFromData(data: RoomMetadata) {
-        metadata = data
         roomData = data
         name = data.name
         type = roomTypeMap[data.type.lowercase()] ?: RoomType.NORMAL
         secrets = data.secrets
         crypts = data.crypts
-        clearType = when (data.type) {
+        clear = when (data.type) {
             "mob" -> ClearType.MOB
             "miniboss" -> ClearType.MINIBOSS
             else -> null
         }
+
+        println("[RoomLoader] Loading room metadata for: ${data.name}")
+        println("  Type: ${data.type}")
+        println("  Secrets: ${data.secrets}")
+        println("  Crypts: ${data.crypts}")
     }
 
     fun loadFromMapColor(color: Int): Room {

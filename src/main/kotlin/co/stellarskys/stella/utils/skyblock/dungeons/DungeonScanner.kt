@@ -13,7 +13,7 @@ object DungeonScanner {
     val rooms = Array<Room?>(36) { null }
     val doors = Array<Any?>(60) { null } // TODO: Replace Any? with Door class
     val uniqueRooms = mutableSetOf<Room>()
-    val uniqueDoors = mutableSetOf<Any>() // TODO: Replace Any with Door class
+    val uniqueDoors = mutableSetOf<Door>() // TODO: Replace Any with Door class
     val players = mutableListOf<Any>() // TODO: Replace Any with DungeonPlayer class
 
     var currentRoom: Room? = null
@@ -35,8 +35,7 @@ object DungeonScanner {
 
         // Rotation + door + player state updates
         checkRoomState()
-
-        //checkDoorState()
+        checkDoorState()
         //checkPlayerState(ticks)
 
         // Bounds check: unregister if beyond 36-room limit
@@ -106,10 +105,16 @@ object DungeonScanner {
             availableComponents.removeAt(idx)
             val roofHeight = getHighestY(rx, rz) ?: continue
 
-            // Door detection — skipped for now
+            // Door detection
             if (cx % 2 == 1 || cz % 2 == 1) {
-                // TODO: door logic
-                println("door stuff")
+                if(roofHeight < 85){
+                    val door = Door(rx to rz, cx to cz)
+
+                    if (cz % 2 == 1) door.rotation = 0
+                    addDoor(door)
+                    println("[DungeonScanner] Added door: ${door.type.toString()}")
+                }
+
                 continue
             }
 
@@ -156,6 +161,50 @@ object DungeonScanner {
         }
     }
 
+    fun getRoomAtIdx(idx: Int): Room? {
+        return if (idx in rooms.indices) rooms[idx] else null
+    }
+
+    fun getRoomAtComp(comp: Pair<Int, Int>): Room? {
+        val idx = getRoomIdx(comp)
+        return if (idx in rooms.indices) rooms[idx] else null
+    }
+
+    fun getRoomAt(x: Int, z: Int): Room? {
+        val comp = realCoordToComponent(x, z)
+        val idx = getRoomIdx(comp)
+        return if (idx in rooms.indices) rooms[idx] else null
+    }
+
+    fun getRoomIdx(comp: Pair<Int, Int>): Int = 6 * comp.second + comp.first
+
+    fun getDoorIdx(comp: Pair<Int, Int>): Int {
+        val base = ((comp.first - 1) shr 1) + 6 * comp.second
+        return base - (base / 12)
+    }
+
+    fun getDoorAtIdx(idx: Int): Door? {
+        return if (idx in doors.indices) doors[idx] as? Door else null
+    }
+
+    fun getDoorAtComp(comp: Pair<Int, Int>): Door? {
+        val idx = getDoorIdx(comp)
+        return getDoorAtIdx(idx)
+    }
+
+    fun getDoorAt(x: Int, z: Int): Door? {
+        val comp = realCoordToComponent(x, z)
+        return getDoorAtComp(comp)
+    }
+
+    fun addDoor(door: Door) {
+        val idx = getDoorIdx(door.getComp())
+        if (idx !in doors.indices) return
+
+        doors[idx] = door
+        uniqueDoors += door
+    }
+
     private fun mergeRooms(room1: Room, room2: Room) {
         uniqueRooms.remove(room2)
         for (comp in room2.components) {
@@ -184,13 +233,13 @@ object DungeonScanner {
         }
     }
 
-    fun getRoomAt(x: Int, z: Int): Room? {
-        val comp = realCoordToComponent(x, z)
-        val idx = getRoomIdx(comp)
-        return if (idx in rooms.indices) rooms[idx] else null
+    fun checkDoorState() {
+        //println("[DungeonScanner] Checking door state")
+        for (door in uniqueDoors) {
+            if (door.opened) continue
+            door.check()
+        }
     }
-
-    fun getRoomIdx(comp: Pair<Int, Int>): Int = 6 * comp.second + comp.first
 
     fun getExploredRooms(): List<Room> {
         return rooms.filterNotNull().filter { it.explored }.distinct()
