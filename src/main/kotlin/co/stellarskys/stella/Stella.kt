@@ -1,5 +1,6 @@
 package co.stellarskys.stella
 
+import co.stellarskys.novaconfig.utils.chatutils
 import co.stellarskys.stella.events.*
 import co.stellarskys.stella.features.Feature
 import co.stellarskys.stella.features.FeatureManager
@@ -7,6 +8,7 @@ import co.stellarskys.stella.utils.ChatUtils
 import co.stellarskys.stella.utils.LocalStore
 import co.stellarskys.stella.utils.LocalStores
 import co.stellarskys.stella.utils.config
+import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
 import com.mojang.brigadier.Command
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
@@ -70,9 +72,12 @@ class Stella : ClientModInitializer {
 		EventBus.register<AreaEvent.Main> ({ updateFeatures() })
 		EventBus.register<AreaEvent.Sub> ({ updateFeatures() })
 
+		/*
 		val test = LocalStore("general","./config/stella/test.json")
 		test["hi"] = false
+		 */
 
+		val room = DungeonScanner.currentRoom
 	}
 
 	companion object {

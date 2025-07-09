@@ -34,9 +34,11 @@ open class Feature(
 
     open fun onUnregister() {}
 
-    fun isEnabled(): Boolean = configValue() && variable()
+    fun InternalisEnabled(): Boolean = configValue() && variable()
 
-    fun update() = onToggle(isEnabled() && inArea() && inSubarea())
+    fun isEnabled(): Boolean = InternalisEnabled() && inArea() && inSubarea()
+
+    fun update() = onToggle(isEnabled())
 
     @Synchronized
     open fun onToggle(state: Boolean) {
@@ -53,9 +55,9 @@ open class Feature(
         }
     }
 
-    fun inArea(): Boolean = areaLower?.let { LocationUtils.area == it } ?: true
+    fun inArea(): Boolean = LocationUtils.checkArea(areaLower)
 
-    fun inSubarea(): Boolean = subareaLower?.let { LocationUtils.subarea?.contains(it) == true } ?: true
+    fun inSubarea(): Boolean = LocationUtils.checkSubarea(subareaLower)
 
     inline fun <reified T : Event> register(noinline cb: (T) -> Unit) {
         events.add(EventBus.register<T>(cb, false))

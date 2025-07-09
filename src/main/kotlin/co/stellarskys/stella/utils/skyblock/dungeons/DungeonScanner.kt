@@ -1,8 +1,10 @@
 package co.stellarskys.stella.utils.skyblock.dungeons
 
 import co.stellarskys.stella.Stella
+import co.stellarskys.stella.events.AreaEvent
 import co.stellarskys.stella.events.EventBus
 import co.stellarskys.stella.events.TickEvent
+import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.WorldUtils
 import co.stellarskys.stella.utils.skyblock.LocationUtils
 
@@ -13,7 +15,6 @@ object DungeonScanner {
     val uniqueRooms = mutableSetOf<Room>()
     val uniqueDoors = mutableSetOf<Any>() // TODO: Replace Any with Door class
     val players = mutableListOf<Any>() // TODO: Replace Any with DungeonPlayer class
-    val player = Stella.mc.player!!
 
     var currentRoom: Room? = null
     var lastIdx: Int? = null
@@ -23,8 +24,8 @@ object DungeonScanner {
     // val onRoomLeave = mutableListOf<(Room?, Room?) -> Unit>()
 
     val tickRegister: EventBus.EventCall = EventBus.register<TickEvent.Client>({
-        if (LocationUtils.area !== "catacombs") return@register
-
+        val player = Stella.mc.player ?: return@register
+        if (LocationUtils.area != "catacombs") return@register
 
         val (x, z) = realCoordToComponent(player.x.toInt(), player.z.toInt())
         val idx = 6 * z + x
@@ -34,6 +35,7 @@ object DungeonScanner {
 
         // Rotation + door + player state updates
         checkRoomState()
+
         //checkDoorState()
         //checkPlayerState(ticks)
 
@@ -54,18 +56,34 @@ object DungeonScanner {
 
         if (lastIdx == idx) return@register
 
-        /*
+
         if (prevRoom?.name != currRoom?.name) {
-            _roomEnterListener.forEach { it(currRoom) }
+           // _roomEnterListener.forEach { it(currRoom) }
+            println("Entered Room! ${currentRoom?.name}")
         }
-         */
 
         lastIdx = idx
         currentRoom = getRoomAt(player.x.toInt(), player.z.toInt())
+    },false)
 
-    })
+    init {
+        println("[DungeonScanner] Initializing!")
+        EventBus.register<AreaEvent.Main> ({
+            TickUtils.schedule(2) {
+                println("[DungeonScanner] World Changed! New world: ${LocationUtils.area}")
+                if (LocationUtils.area != "catacombs") {
+                    println("[DungeonScanner] not in catacombs!")
+                    reset()
+                }
+
+                println("[DungeonScanner] Registering Scanner")
+                tickRegister.register()
+            }
+        })
+    }
 
     fun reset() {
+        tickRegister.unregister()
         availableComponents.clear()
         availableComponents += getScanCoords()
         rooms.fill(null)
@@ -83,7 +101,7 @@ object DungeonScanner {
         for (idx in availableComponents.indices.reversed()) {
             val (cx, cz, rxz) = availableComponents[idx]
             val (rx, rz) = rxz
-            if (!isChunkLoaded(rx, 0, rz)) continue
+            if (!isChunkLoaded(rx,0,rz) || getHighestY(rx, rz) == null)  continue
 
             availableComponents.removeAt(idx)
             val roofHeight = getHighestY(rx, rz) ?: continue
@@ -91,6 +109,7 @@ object DungeonScanner {
             // Door detection — skipped for now
             if (cx % 2 == 1 || cz % 2 == 1) {
                 // TODO: door logic
+                println("door stuff")
                 continue
             }
 
@@ -98,7 +117,8 @@ object DungeonScanner {
             val z = cz / 2
             val idx = getRoomIdx(x to z)
 
-            val room = Room(x to z, roofHeight).scan().findRotation()
+            val room = Room(x to z, roofHeight).scan()
+            println("[DungeonScanner] Added Room ${room.name}")
             rooms[idx] = room
             uniqueRooms += room
 
@@ -157,6 +177,7 @@ object DungeonScanner {
     }
 
     fun checkRoomState() {
+        //println("checking room state")
         for (room in rooms) {
             if (room == null || room.rotation != null) continue
             room.findRotation()

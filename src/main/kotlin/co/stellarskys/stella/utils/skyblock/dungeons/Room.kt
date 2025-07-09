@@ -87,8 +87,10 @@ class Room(
         for ((x, z) in realComponents) {
             if (height == null) height = getHighestY(x, z)
             val core = getCore(x, z) ?: continue
+            println("Room Core $core")
             cores += core
             loadFromCore(core)
+            println("Loaded from core!")
         }
         return this
     }

@@ -84,8 +84,13 @@ object WorldUtils {
         return block
     }
 
+    fun getBlockStringId(x: Int, y: Int, z: Int): String {
+        val block = getBlockAt(x, y, z) ?: return "none"
+        return Registries.BLOCK.getId(block).toString()
+    }
+
     fun getBlockNumericId(x: Int, y: Int, z: Int): Int {
-        val block = getBlockAt(x, y, z) ?: return 0
-        return Registries.BLOCK.getRawId(block)
+        val state = getBlockStateAt(x, y, z)?: return -1
+        return LegIDs.getLegacyId(state)
     }
 }

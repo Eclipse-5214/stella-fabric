@@ -2,12 +2,13 @@
 	"required": true,
 	"package": "co.stellarskys.stella.mixin",
 	"compatibilityLevel": "JAVA_21",
-	"mixins": [
+	"mixins": [],
+	"client": [
 		"accessors.AccessorMinecraft",
 		"accessors.FrustumInvoker",
-		"accessors.WorldRendererAccessor"
+		"accessors.WorldRendererAccessor",
+		"MixinNetworkManager"
 	],
-	"client": [],
 	"injectors": {
 		"defaultRequire": 1
 	}

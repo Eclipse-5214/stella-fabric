@@ -14,6 +14,7 @@ object LocationUtils {
     var subarea: String? = null
 
     init {
+        println("locationUtils initilaizing")
         EventBus.register<PacketEvent.Received> ({ event ->
             when (val packet = event.packet) {
                 is PlayerListS2CPacket -> {

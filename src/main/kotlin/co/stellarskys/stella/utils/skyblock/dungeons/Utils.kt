@@ -13,6 +13,13 @@ object RoomRegistry {
     private val byCore = mutableMapOf<Int, RoomMetadata>()
     private val allRooms = mutableListOf<RoomMetadata>()
 
+    init {
+        // Automatically load room data from resource manager when object initializes
+        println("[RoomRegistry] Intitializing")
+        val resourceManager = Stella.mc.resourceManager
+        load(resourceManager)
+    }
+
     fun load(resourceManager: ResourceManager) {
         val id = Identifier.of(Stella.NAMESPACE, "dungeons/roomdata.json")
         val optional = resourceManager.getResource(id)
@@ -146,6 +153,9 @@ val mapColorToRoomType = mapOf(
 fun getScanCoords(): List<Triple<Int, Int, Pair<Int, Int>>> {
     val coords = mutableListOf<Triple<Int, Int, Pair<Int, Int>>>()
 
+    println("hrs $halfRoomSize, hcs $halfCombinedSize")
+
+
     for (z in 0..<11) {
         for (x in 0..<11) {
             if (x % 2 == 1 && z % 2 == 1) continue
@@ -163,5 +173,5 @@ fun isChunkLoaded(x: Int, y: Int, z: Int): Boolean {
     val world = Stella.mc.world ?: return false
     val chunkX = x shr 4
     val chunkZ = z shr 4
-    return world.isChunkLoaded(chunkX, chunkZ)
+    return world.chunkManager.isChunkLoaded(chunkX, chunkZ)
 }
