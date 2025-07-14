@@ -1,5 +1,8 @@
 package co.stellarskys.stella.events
 
+import co.stellarskys.stella.utils.ScoreboardUtils
+import co.stellarskys.stella.utils.stripControlCodes
+import kotlinx.atomicfu.traceFormatDefault
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
@@ -14,6 +17,7 @@ import net.minecraft.network.packet.s2c.common.CommonPingS2CPacket
 import net.minecraft.network.packet.s2c.play.*
 import org.lwjgl.glfw.GLFW
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.jvm.optionals.getOrNull
 
 object EventBus {
     val listeners = ConcurrentHashMap<Class<*>, MutableSet<Any>>()
@@ -73,6 +77,7 @@ object EventBus {
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
             post(GameEvent.Unload())
         }
+
     }
 
     fun onPacketReceived(packet: Packet<*>) {
@@ -97,11 +102,43 @@ object EventBus {
             }
             is ScoreboardObjectiveUpdateS2CPacket, is ScoreboardScoreUpdateS2CPacket, is ScoreboardDisplayS2CPacket, is TeamS2CPacket -> {
                 post(ScoreboardEvent.Update(packet))
+
+                // Stella exclusive code!
+                if(packet as? TeamS2CPacket == null) return
+
+                val teamStr = packet.teamName
+                val teamMatch = Regex("^team_(\\d+)$").matchEntire(teamStr)
+
+                if (teamMatch == null) return
+
+                val team = packet.team.getOrNull() ?: return
+
+                val formatted = team.prefix.string + team.suffix.string
+                val unformatted = formatted.stripControlCodes()
+
+
+                post(ScoreboardEvent.Full(formatted, unformatted))
+                post(ScoreboardEvent.Clear(ScoreboardUtils.cleanSB(unformatted), formatted, unformatted))
             }
             is PlayerListS2CPacket -> {
                 when (packet.actions.firstOrNull()) {
                     PlayerListS2CPacket.Action.ADD_PLAYER, PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME -> {
                         post(TablistEvent.Update(packet))
+
+                        // Stella Exclusive
+                        val action =  packet.actions.firstOrNull()
+                        if (action != PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME) return
+                        val tlplayers = packet.entries
+
+                        tlplayers.forEach { addplayerdata ->
+                            val name = addplayerdata.displayName
+
+                            if (name == null) return
+                            val formatted = name.string
+                            val unformatted = formatted.stripControlCodes()
+
+                            post(TablistEvent.UpdatePlayer(formatted, unformatted))
+                        }
                     }
                     else -> {}
                 }

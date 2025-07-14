@@ -7,7 +7,9 @@ import co.stellarskys.stella.features.FeatureManager
 import co.stellarskys.stella.utils.ChatUtils
 import co.stellarskys.stella.utils.LocalStore
 import co.stellarskys.stella.utils.LocalStores
+import co.stellarskys.stella.utils.ScoreboardUtils
 import co.stellarskys.stella.utils.config
+import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
 import com.mojang.brigadier.Command
 import net.fabricmc.api.ClientModInitializer
@@ -69,6 +71,10 @@ class Stella : ClientModInitializer {
 			isInInventory = false
 		})
 
+		EventBus.register<TickEvent.Client>({
+			ScoreboardUtils.sidebarLines = ScoreboardUtils.fetchScoreboardLines().map { l -> ScoreboardUtils.cleanSB(l) }
+		})
+
 		EventBus.register<AreaEvent.Main> ({ updateFeatures() })
 		EventBus.register<AreaEvent.Sub> ({ updateFeatures() })
 
@@ -78,6 +84,7 @@ class Stella : ClientModInitializer {
 		 */
 
 		val room = DungeonScanner.currentRoom
+		val floor = Dungeon.floor
 	}
 
 	companion object {

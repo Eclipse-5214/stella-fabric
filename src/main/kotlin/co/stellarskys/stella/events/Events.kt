@@ -73,10 +73,17 @@ abstract class PacketEvent {
 
 abstract class ScoreboardEvent {
     class Update(val packet: Packet<*>) : Event()
+
+    // Stella exclusive events
+    class Clear(val clear: String, val formatted: String, val unformatted: String) : Event()
+    class Full(val formatted: String, val unformatted: String) : Event()
 }
 
 abstract class TablistEvent {
     class Update(val packet: PlayerListS2CPacket) : Event()
+
+    // Stella exclusive events
+    class UpdatePlayer(val formatted: String, val unformatted: String) : Event()
 }
 
 abstract class AreaEvent {
