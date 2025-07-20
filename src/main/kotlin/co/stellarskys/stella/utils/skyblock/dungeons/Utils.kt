@@ -175,3 +175,30 @@ fun isChunkLoaded(x: Int, y: Int, z: Int): Boolean {
     val chunkZ = z shr 4
     return world.chunkManager.isChunkLoaded(chunkX, chunkZ)
 }
+
+fun decodeRoman(roman: String): Int {
+    val values = mapOf(
+        'I' to 1,
+        'V' to 5,
+        'X' to 10,
+        'L' to 50,
+        'C' to 100,
+        'D' to 500,
+        'M' to 1000
+    )
+
+    var total = 0
+    var prev = 0
+
+    for (char in roman.uppercase()) {
+        val value = values[char] ?: return 0  // return 0 for invalid characters
+        if (value > prev) {
+            total += value - 2 * prev  // correct for subtraction rule
+        } else {
+            total += value
+        }
+        prev = value
+    }
+
+    return total
+}

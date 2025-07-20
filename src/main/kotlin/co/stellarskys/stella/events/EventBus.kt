@@ -1,6 +1,7 @@
 package co.stellarskys.stella.events
 
 import co.stellarskys.stella.utils.ScoreboardUtils
+import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.stripControlCodes
 import kotlinx.atomicfu.traceFormatDefault
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents
@@ -142,6 +143,11 @@ object EventBus {
                     }
                     else -> {}
                 }
+            }
+            //stella stuff
+
+            is MapUpdateS2CPacket -> {
+                Dungeon.calibrateDungeonMap()
             }
         }
     }

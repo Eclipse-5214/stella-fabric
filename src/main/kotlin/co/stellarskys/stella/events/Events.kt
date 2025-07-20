@@ -10,6 +10,7 @@ import net.minecraft.client.util.math.MatrixStack
 import net.minecraft.client.world.ClientWorld
 import net.minecraft.entity.Entity
 import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.item.map.MapState
 import net.minecraft.network.packet.Packet
 import net.minecraft.network.packet.s2c.play.*
 import net.minecraft.text.Text
@@ -89,4 +90,9 @@ abstract class TablistEvent {
 abstract class AreaEvent {
     class Main(val area: String) : Event()
     class Sub(val subarea: String) : Event()
+}
+
+// stella exclusive
+abstract class DungeonEvent {
+    class MapData(val data: MapState,val colors: ByteArray): Event()
 }
