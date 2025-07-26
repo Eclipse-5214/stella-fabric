@@ -41,7 +41,7 @@ class Room(
     var shape: String = "1x1"
     var explored = false
     var checkmark = Checkmark.UNEXPLORED
-    var players = mutableSetOf<String>()
+    var players: MutableSet<DungeonPlayer> = mutableSetOf()
 
     var name: String? = null
     var corner: Triple<Double, Double, Double>? = null
@@ -84,11 +84,11 @@ class Room(
     fun scan(): Room {
         for ((x, z) in realComponents) {
             if (height == null) height = getHighestY(x, z)
-            val core = getCore(x, z) ?: continue
-            println("Room Core $core")
+            val core = getCore(x, z)
+            //println("Room Core $core")
             cores += core
             loadFromCore(core)
-            println("Loaded from core!")
+            //println("Loaded from core!")
         }
         return this
     }
@@ -111,14 +111,14 @@ class Room(
             else -> null
         }
 
-        println("[RoomLoader] Loading room metadata for: ${data.name}")
-        println("  Type: ${data.type}")
-        println("  Secrets: ${data.secrets}")
-        println("  Crypts: ${data.crypts}")
+        //println("[RoomLoader] Loading room metadata for: ${data.name}")
+        //println("  Type: ${data.type}")
+        //println("  Secrets: ${data.secrets}")
+        //println("  Crypts: ${data.crypts}")
     }
 
-    fun loadFromMapColor(color: Int): Room {
-        type = mapColorToRoomType[color] ?: RoomType.NORMAL
+    fun loadFromMapColor(color: Byte): Room {
+        type = mapColorToRoomType[color.toInt()] ?: RoomType.NORMAL
         when (type) {
             RoomType.BLOOD -> RoomRegistry.getAll().find { it.name == "Blood" }?.let { loadFromData(it) }
             RoomType.ENTRANCE -> RoomRegistry.getAll().find { it.name == "Entrance" }?.let { loadFromData(it) }

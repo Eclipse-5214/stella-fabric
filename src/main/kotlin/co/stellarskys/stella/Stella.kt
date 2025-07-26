@@ -27,24 +27,13 @@ import java.util.concurrent.ConcurrentHashMap
 class Stella : ClientModInitializer {
 	private var shown = false
 
+	@Target(AnnotationTarget.CLASS)
+	annotation class Command
+
 	override fun onInitializeClient() {
 		init()
 		FeatureManager.init()
 		LocalStores.init()
-
-		ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
-			val cmd = Command<FabricClientCommandSource> { context ->
-				config.open()
-				println("command executed")
-				1
-			}
-
-			dispatcher.register(
-				ClientCommandManager.
-				literal("stella").
-				executes(cmd)
-			)
-		}
 
 		ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
 			if (shown) return@register
@@ -96,6 +85,8 @@ class Stella : ClientModInitializer {
 		val STELLA_MOD: ModContainer = FabricLoader.getInstance().getModContainer(NAMESPACE).orElseThrow()
 		val VERSION: String? = STELLA_MOD.getMetadata().getVersion().getFriendlyString()
 		val INSTANCE: Stella? = null
+		val PREFIX: String = "§d[Stella]"
+		val SHORTPREFIX: String = "§d[SA]"
 
 		var isInInventory = false
 

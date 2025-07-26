@@ -15,7 +15,6 @@ object RoomRegistry {
 
     init {
         // Automatically load room data from resource manager when object initializes
-        println("[RoomRegistry] Intitializing")
         val resourceManager = Stella.mc.resourceManager
         load(resourceManager)
     }
@@ -61,14 +60,16 @@ val directions = listOf(
 val defaultMapSize = Pair(125, 125)
 
 fun hashCode(s: String): Int {
-    return s.fold(0) { acc, c -> ((acc shl 5) - acc + c.code) } and 0xFFFFFFFF.toInt()
+    return s.fold(0) { acc, c -> (acc shl 5) - acc + c.code }
 }
 
-fun getCore(x: Int, z: Int): Int? {
+val blacklistedIds = setOf(101, 54) // Add more block IDs if needed
+
+fun getCore(x: Int, z: Int): Int {
     val ids = buildString {
         for (y in 140 downTo 12) {
             val id = WorldUtils.getBlockNumericId(x, y, z)
-            append(if (id == 101 || id == 54) "0" else id.toString())
+            append(if (id in blacklistedIds) "0" else id.toString())
         }
     }
     return hashCode(ids)
@@ -152,9 +153,6 @@ val mapColorToRoomType = mapOf(
 
 fun getScanCoords(): List<Triple<Int, Int, Pair<Int, Int>>> {
     val coords = mutableListOf<Triple<Int, Int, Pair<Int, Int>>>()
-
-    println("hrs $halfRoomSize, hcs $halfCombinedSize")
-
 
     for (z in 0..<11) {
         for (x in 0..<11) {

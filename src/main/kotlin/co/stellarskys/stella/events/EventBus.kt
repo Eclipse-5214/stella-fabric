@@ -9,13 +9,20 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
+import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback
+import net.fabricmc.fabric.api.event.player.UseBlockCallback
+import net.fabricmc.fabric.api.event.player.UseEntityCallback
+import net.fabricmc.fabric.api.event.player.UseItemCallback
 import net.minecraft.network.packet.Packet
 import net.minecraft.network.packet.s2c.common.CommonPingS2CPacket
 import net.minecraft.network.packet.s2c.play.*
+import net.minecraft.util.ActionResult
 import org.lwjgl.glfw.GLFW
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.jvm.optionals.getOrNull
@@ -40,6 +47,16 @@ object EventBus {
         }
         ClientReceiveMessageEvents.ALLOW_GAME.register { msg, show ->
             !post(ChatEvent.Receive(msg, show))
+        }
+        ClientSendMessageEvents.ALLOW_CHAT.register { string ->
+            !post(ChatEvent.Send(string))
+        }
+        ClientSendMessageEvents.ALLOW_COMMAND.register { string ->
+            val command = string.split(" ")[0].lowercase()
+            when (command) {
+                "gc", "pc", "ac", "msg", "tell", "r", "say", "w", "reply" -> !post(ChatEvent.Send("/$string"))
+                else -> true
+            }
         }
         WorldRenderEvents.LAST.register { context ->
             post(RenderEvent.World(context))
@@ -78,7 +95,26 @@ object EventBus {
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
             post(GameEvent.Unload())
         }
-
+        UseItemCallback.EVENT.register { player, world, hand ->
+            post(EntityEvent.Interact(player, world, hand, "USE_ITEM"))
+            ActionResult.PASS
+        }
+        UseBlockCallback.EVENT.register { player, world, hand, hitResult ->
+            post(EntityEvent.Interact(player, world, hand, "USE_BLOCK", hitResult.blockPos))
+            ActionResult.PASS
+        }
+        UseEntityCallback.EVENT.register { player, world, hand, entity, hitResult ->
+            post(EntityEvent.Interact(player, world, hand, "USE_ENTITY"))
+            ActionResult.PASS
+        }
+        AttackBlockCallback.EVENT.register { player, world, hand, pos, direction ->
+            post(EntityEvent.Interact(player, world, hand, "ATTACK_BLOCK", pos))
+            ActionResult.PASS
+        }
+        AttackEntityCallback.EVENT.register { player, world, hand, entity, hitResult ->
+            post(EntityEvent.Interact(player, world, hand, "ATTACK_ENTITY"))
+            ActionResult.PASS
+        }
     }
 
     fun onPacketReceived(packet: Packet<*>) {

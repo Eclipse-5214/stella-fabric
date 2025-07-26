@@ -4,9 +4,11 @@ import co.stellarskys.stella.Stella
 import net.minecraft.block.Block
 import net.minecraft.block.BlockState
 import net.minecraft.client.MinecraftClient
+import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.particle.ParticleTypes
 import net.minecraft.particle.SimpleParticleType
 import net.minecraft.registry.Registries
+import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
 import net.minecraft.util.math.BlockPos
@@ -92,5 +94,10 @@ object WorldUtils {
     fun getBlockNumericId(x: Int, y: Int, z: Int): Int {
         val state = getBlockStateAt(x, y, z)?: return -1
         return LegIDs.getLegacyId(state)
+    }
+
+    fun getPlayerByName(name: String): PlayerEntity? {
+        val world = Stella.mc.world ?: return null
+        return world.players.firstOrNull { it.name.string == name }
     }
 }

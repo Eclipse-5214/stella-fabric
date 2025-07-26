@@ -14,6 +14,9 @@ import net.minecraft.item.map.MapState
 import net.minecraft.network.packet.Packet
 import net.minecraft.network.packet.s2c.play.*
 import net.minecraft.text.Text
+import net.minecraft.util.Hand
+import net.minecraft.util.math.BlockPos
+import net.minecraft.world.World
 
 abstract class Event
 
@@ -21,6 +24,13 @@ abstract class CancellableEvent : Event() {
     private var cancelled = false
     fun cancel() { cancelled = true }
     fun isCancelled() = cancelled
+}
+
+abstract class MouseEvent {
+    class Click(val button: Int) : Event()
+    class Release(val button: Int) : Event()
+    class Scroll(val event: MouseEvent) : Event()
+    class Move(val event: MouseEvent) : Event()
 }
 
 abstract class TickEvent {
@@ -40,14 +50,17 @@ abstract class RenderEvent {
     class EntityPost(val entity: Entity, val matrices: MatrixStack, val vertex: VertexConsumerProvider, val light: Int) : Event()
     class PlayerPre(val entity: PlayerEntityRenderState, val matrices: MatrixStack) : Event()
     class BlockOutline(val worldContext: WorldRenderContext, val blockContext: WorldRenderContext.BlockOutlineContext) : CancellableEvent()
+    class EntityGlow(val entity: Entity, var shouldGlow: Boolean, var glowColor: Int) : Event()
 }
 
 abstract class EntityEvent {
     class Join(val entity: Entity) : Event()
     class Leave(val entity: Entity) : Event()
+    class Death(val entity: Entity) : Event()
     class Attack(val player: PlayerEntity, val target: Entity) : Event()
     class Metadata(val packet: EntityTrackerUpdateS2CPacket) : Event()
     class Spawn(val packet: EntitySpawnS2CPacket) : Event()
+    class Interact(val player: PlayerEntity, val world: World, val hand: Hand, val action: String, val pos: BlockPos? = null) : Event()
 }
 
 abstract class GuiEvent {
@@ -61,6 +74,7 @@ abstract class GuiEvent {
 
 abstract class ChatEvent {
     class Receive(val message: Text, val overlay: Boolean) : CancellableEvent()
+    class Send(val message: String) : CancellableEvent()
 }
 
 abstract class WorldEvent {

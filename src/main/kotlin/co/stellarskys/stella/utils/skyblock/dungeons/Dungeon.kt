@@ -2,28 +2,22 @@ package co.stellarskys.stella.utils.skyblock.dungeons
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.AreaEvent
+import co.stellarskys.stella.events.ChatEvent
 import co.stellarskys.stella.events.DungeonEvent
+import co.stellarskys.stella.events.EntityEvent
 import co.stellarskys.stella.events.EventBus
 import co.stellarskys.stella.events.ScoreboardEvent
 import co.stellarskys.stella.events.TablistEvent
 import co.stellarskys.stella.events.TickEvent
 import co.stellarskys.stella.mixin.accessors.AccessorMapState
-import co.stellarskys.stella.utils.ScoreboardUtils
 import co.stellarskys.stella.utils.TickUtils
+import co.stellarskys.stella.utils.Utils.removeFormatting
 import co.stellarskys.stella.utils.skyblock.LocationUtils
-import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner.tickRegister
-import co.stellarskys.stella.utils.stripControlCodes
+import net.minecraft.entity.EquipmentSlot
+import net.minecraft.entity.mob.ZombieEntity
 import net.minecraft.item.FilledMapItem
 import net.minecraft.item.map.MapDecoration
 import net.minecraft.item.map.MapState
-import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket
-import net.minecraft.network.packet.s2c.play.ScoreboardDisplayS2CPacket
-import net.minecraft.network.packet.s2c.play.ScoreboardObjectiveUpdateS2CPacket
-import net.minecraft.network.packet.s2c.play.ScoreboardScoreUpdateS2CPacket
-import net.minecraft.network.packet.s2c.play.TeamS2CPacket
-import net.minecraft.server.network.ServerPlayerEntity
-import java.util.regex.Pattern
-import kotlin.jvm.optionals.getOrNull
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -91,7 +85,8 @@ object Dungeon {
         "OpenedRooms" to Regex("""^Opened Rooms: (\d+)$"""),
         "ClearedRooms" to Regex("""^Completed Rooms: (\d+)$"""),
         "ClearedPercent" to Regex("""^Cleared: (\d+)% \(\d+\)$"""),
-        "DungeonTime" to Regex("""^Time: (?:(\d+)h)?\s?(?:(\d+)m)?\s?(?:(\d+)s)?$""")
+        "DungeonTime" to Regex("""^Time: (?:(\d+)h)?\s?(?:(\d+)m)?\s?(?:(\d+)s)?$"""),
+        "Mimic" to Regex("""^Party > (?:\[[\w+]+])?(?:\w{1,16}): (.*)$""")
     )
 
 
@@ -149,6 +144,19 @@ object Dungeon {
     var has300Triggered: Boolean = false
     private var hasPaul = false
 
+    // Mimic
+    val MimicTrigger: EventBus.EventCall = EventBus.register<EntityEvent.Death>({ event ->
+        val mcEntity = event.entity
+        if (mcEntity !is ZombieEntity) return@register
+        if (floorNumber !in listOf(6, 7) || mimicDead) return@register
+        if (
+            !mcEntity.isBaby ||
+            EquipmentSlot.entries
+                .filter { it.type == EquipmentSlot.Type.HUMANOID_ARMOR }
+                .any { slot -> mcEntity.getEquippedStack(slot).isEmpty }
+        ) return@register
+        mimicDead = true
+    }, false)
 
     init {
         EventBus.register<ScoreboardEvent.Clear>({ event ->
@@ -158,7 +166,7 @@ object Dungeon {
                 val percentStr = percentMatch.groupValues[1]
                 clearedPercent = percentStr.toInt()
 
-                println("[Dungeon] clear percentage: $clearedPercent")
+                //println("[Dungeon] clear percentage: $clearedPercent")
                 return@register
             }
 
@@ -167,7 +175,10 @@ object Dungeon {
             val floorMatch = regexes["Floor"]!!.find(msg) ?: return@register
             floor = floorMatch.groupValues[1]
             floorNumber = floor?.getOrNull(1)?.digitToIntOrNull() ?: 0
-            println("[Dungeon] floor: $floor, number: $floorNumber")
+            secretsPercentNeeded = floorSecrets[floor] ?: 1.0
+            MimicTrigger.register()
+
+            //println("[Dungeon] floor: $floor, number: $floorNumber")
         })
 
 
@@ -206,7 +217,7 @@ object Dungeon {
                 val puzzleEnum = puzzleEnums[puzzleState]  // Assuming PuzzleEnums is a map<String, Int>
                 if (puzzleEnum == 1) puzzlesDone++
 
-                println("[Dungeon] Puzzle: $puzzleName, State: $puzzleState")
+                //println("[Dungeon] Puzzle: $puzzleName, State: $puzzleState")
             }
 
             val playerMatch = regexes["PlayerInfo"]?.find(msg)?.groupValues
@@ -215,7 +226,7 @@ object Dungeon {
                 val className = playerMatch[3]
                 val classLevel = playerMatch[4]
 
-                println("[Dungeon] Player: $playerName, Class: $className, Level: ${decodeRoman(classLevel)}")
+                //println("[Dungeon] Player: $playerName, Class: $className, Level: ${decodeRoman(classLevel)}")
 
                 if (!partyMembers.contains(playerName)) {
                     partyMembers.add(playerName)
@@ -260,7 +271,7 @@ object Dungeon {
                 val iconNumber = match.groupValues[1].toInt()
                 val player = if (iconNumber < iconOrder.size) iconOrder[iconNumber] else null
 
-                //println("[MapStuff] $iconName, X: ${decoration.mapX}, y: ${decoration.mapZ}, Yaw: ${decoration.yaw}")
+                //println("[MapStuff] $player, X: ${decoration.mapX}, y: ${decoration.mapZ}, Yaw: ${decoration.yaw}")
 
                 icons[iconName] = Icon(
                     x = decoration.mapX,
@@ -287,12 +298,21 @@ object Dungeon {
                     if (roomColor != 18.toByte()) continue
                     //bloodOpen = true
 
-                    println("checking blood status")
                     if (center != 30.toByte()) continue
                     bloodDone = true
-                    println("blood is done")
                 }
             }
+        })
+
+        EventBus.register<ChatEvent.Receive>( { event ->
+            if (floorNumber !in listOf(6, 7) || floor == null) return@register
+
+            val msg = event.message.string.removeFormatting()
+            val match = regexes["Mimic"]!!.matchEntire(msg)
+
+            if (match == null) return@register
+            if (mimicMessages.none { it == match.groupValues[1].lowercase() }) return@register
+            mimicDead = true
         })
 
         EventBus.register<AreaEvent.Main> ({
@@ -332,6 +352,7 @@ object Dungeon {
         mimicDead = false
         has270Triggered = false
         has300Triggered = false
+        MimicTrigger.unregister()
     }
 
     data class ScoreData(
@@ -378,12 +399,12 @@ object Dungeon {
         val totalRooms = estimatedTotal.toInt().takeIf { it > 0 } ?: 36
         scoreData.totalRooms = totalRooms
 
-        println("[asdfasdf] total rooms: ${scoreData.totalRooms}")
+        //println("[asdfasdf] total rooms: ${scoreData.totalRooms}")
 
         scoreData.adjustedRooms = completedRooms
 
         if (!bloodDone || !inBoss()) {
-            println("adjusting for blood")
+            //println("adjusting for blood")
             scoreData.adjustedRooms++
         }
         if (completedRooms <= scoreData.totalRooms - 1 && !bloodDone) scoreData.adjustedRooms++
@@ -419,9 +440,9 @@ object Dungeon {
         scoreData.maxSecrets = ceil(scoreData.totalSecrets * secretsPercentNeeded).toInt()
         scoreData.minSecrets = floor(scoreData.maxSecrets * ((40.0 - scoreData.bonusScore + scoreData.deathPenalty) / 40.0)).toInt()
 
-        println("[Dungeon] Score: ${scoreData.score}, Min Secs: ${scoreData.minSecrets}, Max Secs: ${scoreData.maxSecrets}")
-        println("Skill: ${scoreData.skillScore}, Explore: ${scoreData.exploreScore}")
-        println("Speed: $speedScore, Bonus: ${scoreData.bonusScore}")
+        //println("[Dungeon] Score: ${scoreData.score}, Min Secs: ${scoreData.minSecrets}, Max Secs: ${scoreData.maxSecrets}")
+        //println("Skill: ${scoreData.skillScore}, Explore: ${scoreData.exploreScore}")
+        //("Speed: $speedScore, Bonus: ${scoreData.bonusScore}")
 
         /*
         if (scoreData.score >= 300 && !_has300Triggered) {
