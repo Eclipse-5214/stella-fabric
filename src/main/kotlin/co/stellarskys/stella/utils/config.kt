@@ -2,7 +2,10 @@ package co.stellarskys.stella.utils
 
 import co.stellarskys.novaconfig.core.Config
 import co.stellarskys.stella.Stella
+import co.stellarskys.stella.hud.HUDEditor
+import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 
 val config = Config("Stella", "stella") {
@@ -87,5 +90,19 @@ object MainCommand : CommandUtils(
     override fun execute(context: CommandContext<FabricClientCommandSource>): Int {
         config.open()
         return 1
+    }
+
+    override fun buildCommand(builder: LiteralArgumentBuilder<FabricClientCommandSource>) {
+        builder.then(
+            ClientCommandManager.literal("hud")
+                .executes { _ ->
+                    TickUtils.schedule(1) {
+                        Stella.mc.execute {
+                            Stella.mc.setScreen(HUDEditor())
+                        }
+                    }
+                    1
+                }
+        )
     }
 }
