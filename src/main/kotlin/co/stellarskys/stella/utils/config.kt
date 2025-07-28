@@ -17,6 +17,16 @@ val config = Config("Stella", "stella") {
         }
     }
 
+    category( "Dungeons") {
+        subcategory( "Room Name")
+
+        toggle {
+            configName = "showRoomName"
+            name = "Show Room Name"
+            description = "Showes the current dungeon rooms name in a hud"
+        }
+    }
+
     category( "Msc."){
         subcategory("Block Overlay")
 

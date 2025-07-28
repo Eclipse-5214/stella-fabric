@@ -7,7 +7,7 @@ import co.stellarskys.stella.features.FeatureManager
 import co.stellarskys.stella.utils.ChatUtils
 import co.stellarskys.stella.utils.LocalStore
 import co.stellarskys.stella.utils.LocalStores
-import co.stellarskys.stella.utils.ScoreboardUtils
+import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
@@ -28,6 +28,9 @@ class Stella : ClientModInitializer {
 	private var shown = false
 
 	@Target(AnnotationTarget.CLASS)
+	annotation class Module
+
+	@Target(AnnotationTarget.CLASS)
 	annotation class Command
 
 	override fun onInitializeClient() {
@@ -38,8 +41,8 @@ class Stella : ClientModInitializer {
 		ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
 			if (shown) return@register
 			ChatUtils.addMessage(
-				"§d[Stella] §nMod loaded - §c${FeatureManager.getFeatCount()} §bfeatures",
-				"§d${FeatureManager.getLoadtime()}ms §7| §d7 utils §7| §d1 command"
+				"§d[Stella] §fMod loaded - §b${FeatureManager.getFeatCount()} §ffeatures",
+				"§d${FeatureManager.getLoadtime()}ms §8- §d${FeatureManager.getCommandCount()} commands"
 			)
 			//UpdateChecker.checkForUpdates()
 			shown = true
@@ -60,12 +63,17 @@ class Stella : ClientModInitializer {
 			isInInventory = false
 		})
 
-		EventBus.register<TickEvent.Client>({
-			ScoreboardUtils.sidebarLines = ScoreboardUtils.fetchScoreboardLines().map { l -> ScoreboardUtils.cleanSB(l) }
+		EventBus.register<AreaEvent.Main> ({
+			TickUtils.scheduleServer(1) {
+				areaFeatures.forEach { it.update() }
+			}
 		})
 
-		EventBus.register<AreaEvent.Main> ({ updateFeatures() })
-		EventBus.register<AreaEvent.Sub> ({ updateFeatures() })
+		EventBus.register<AreaEvent.Sub> ({
+			TickUtils.scheduleServer(1) {
+				subareaFeatures.forEach { it.update() }
+			}
+		})
 
 		/*
 		val test = LocalStore("general","./config/stella/test.json")
@@ -80,6 +88,9 @@ class Stella : ClientModInitializer {
 		private val features = mutableListOf<Feature>()
 		private val configListeners = ConcurrentHashMap<String, MutableList<Feature>>()
 		private val ConfigCallback = ConcurrentHashMap<String, MutableList<() -> Unit>>()
+		private val areaFeatures = mutableListOf<Feature>()
+		private val subareaFeatures = mutableListOf<Feature>()
+
 		val mc = MinecraftClient.getInstance()
 		val NAMESPACE: String = "stella"
 		val STELLA_MOD: ModContainer = FabricLoader.getInstance().getModContainer(NAMESPACE).orElseThrow()
@@ -92,6 +103,9 @@ class Stella : ClientModInitializer {
 
 		fun addFeature(feature: Feature) {
 			features.add(feature)
+
+			if (feature.hasAreas()) areaFeatures.add(feature)
+			if (feature.hasSubareas()) subareaFeatures.add(feature)
 		}
 
 		fun registerListener(configName: String, feature: Feature) {

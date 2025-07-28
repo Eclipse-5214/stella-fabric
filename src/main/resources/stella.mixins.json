@@ -9,7 +9,8 @@
 		"accessors.WorldRendererAccessor",
 		"accessors.AccessorMapState",
 		"MixinNetworkManager",
-		"MixinLivingEntity"
+		"MixinLivingEntity",
+		"MixinGameRenderer"
 	],
 	"injectors": {
 		"defaultRequire": 1

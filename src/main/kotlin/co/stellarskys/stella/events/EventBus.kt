@@ -1,6 +1,5 @@
 package co.stellarskys.stella.events
 
-import co.stellarskys.stella.utils.ScoreboardUtils
 import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.stripControlCodes
 import kotlinx.atomicfu.traceFormatDefault
@@ -152,10 +151,10 @@ object EventBus {
 
                 val formatted = team.prefix.string + team.suffix.string
                 val unformatted = formatted.stripControlCodes()
-
+                val clear = unformatted.toCharArray().filter { it.code in 32..126 }.joinToString(separator = "")
 
                 post(ScoreboardEvent.Full(formatted, unformatted))
-                post(ScoreboardEvent.Clear(ScoreboardUtils.cleanSB(unformatted), formatted, unformatted))
+                post(ScoreboardEvent.Clear(clear, formatted, unformatted))
             }
             is PlayerListS2CPacket -> {
                 when (packet.actions.firstOrNull()) {

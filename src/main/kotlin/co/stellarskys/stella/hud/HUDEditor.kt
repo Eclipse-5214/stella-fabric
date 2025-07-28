@@ -1,5 +1,6 @@
 package co.stellarskys.stella.hud
 
+import co.stellarskys.novaconfig.ui.NovaPalette
 import co.stellarskys.stella.hud.HUDManager.setPosition
 import co.stellarskys.stella.utils.Utils
 import net.minecraft.client.gui.DrawContext
@@ -101,33 +102,33 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         val x = 15
         val y = 10
         context.fill(x - 5, y - 3, x + textWidth + 5, y + 13, Color(0, 0, 0, 180).rgb)
-        context.drawTextWithShadow(textRenderer, text, x, y, Color(100, 180, 255).rgb)
+        context.drawTextWithShadow(textRenderer, text, x, y, NovaPalette.Mauve.rgb)
     }
 
     private fun drawToolbar(context: DrawContext, mouseX: Int, mouseY: Int) {
         val height = 30
         context.fill(0, 0, width, height, Color(20, 20, 30, 220).rgb)
-        context.fill(0, height, width, height + 2, Color(70, 130, 180, 255).rgb)
+        context.fill(0, height, width, height + 2, NovaPalette.Mauve.rgb)
 
         val buttons = listOf("Grid", "Snap", "Preview", "Reset", "Properties", "Elements", "Toolbar")
         val states = listOf(showGrid, snapToGrid, previewMode, false, showProperties, showElements, showToolbar)
         var x = 15
 
-        val title = "Zen - HUD Editor"
+        val title = "Stella - HUD Editor"
         val textWidth = textRenderer.getWidth(title)
         val titlex = width - textWidth - 15
 
-        context.drawTextWithShadow(textRenderer, title, titlex, 10, Color(100, 180, 255).rgb)
+        context.drawTextWithShadow(textRenderer, title, titlex, 10, NovaPalette.Mauve.rgb)
 
         buttons.forEachIndexed { index, button ->
             val buttonWidth = textRenderer.getWidth(button) + 20
             val hovered = mouseX in x..(x + buttonWidth) && mouseY in 0..height
 
             if (states[index]) {
-                context.fill(x, height - 3, x + buttonWidth, height, Color(100, 180, 255).rgb)
+                context.fill(x, height - 3, x + buttonWidth, height, NovaPalette.Lavender.rgb)
             }
 
-            val color = if (hovered) Color(100, 180, 255).rgb else Color(200, 220, 240).rgb
+            val color = if (hovered) NovaPalette.Mauve.rgb else NovaPalette.Lavender.rgb
             context.drawTextWithShadow(textRenderer, button, x + 10, 10, color)
             x += buttonWidth + 10
         }
@@ -143,9 +144,9 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         val listY = if (showToolbar) 40 else 15
 
         context.fill(listX, listY, listX + listWidth, listY + listHeight, Color(20, 20, 30, 180).rgb)
-        drawHollowRect(context, listX, listY, listX + listWidth, listY + listHeight, Color(70, 130, 180, 255).rgb)
+        drawHollowRect(context, listX, listY, listX + listWidth, listY + listHeight, NovaPalette.Lavender.rgb)
 
-        context.drawTextWithShadow(textRenderer, "HUD Elements", listX + 10, listY + 8, Color(180, 220, 255).rgb)
+        context.drawTextWithShadow(textRenderer, "HUD Elements", listX + 10, listY + 8, NovaPalette.Lavender.rgb)
 
         val scrollOffset = if (elements.size * elementHeight > listHeight - headerHeight - padding) {
             maxOf(0, elements.size * elementHeight - (listHeight - headerHeight - padding))
@@ -168,7 +169,7 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
             context.drawText(textRenderer, displayName, listX + 10, elementY + 3, nameColor, false)
 
             val toggleText = if (element.enabled) "ON" else "OFF"
-            val toggleColor = if (element.enabled) Color(100, 220, 100).rgb else Color(220, 100, 100).rgb
+            val toggleColor = if (element.enabled) NovaPalette.Green.rgb else NovaPalette.Red.rgb
             context.drawText(textRenderer, toggleText, listX + listWidth - 30, elementY + 3, toggleColor, false)
         }
     }
@@ -180,9 +181,9 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         val y = this.height - height - 15
 
         context.fill(x, y, x + width, y + height, Color(20, 20, 30, 180).rgb)
-        drawHollowRect(context, x, y, x + width, y + height, Color(70, 130, 180, 255).rgb)
+        drawHollowRect(context, x, y, x + width, y + height, NovaPalette.Lavender.rgb)
 
-        context.drawTextWithShadow(textRenderer, "Properties", x + 10, y + 10, Color(100, 180, 255).rgb)
+        context.drawTextWithShadow(textRenderer, "Properties", x + 10, y + 10, NovaPalette.Mauve.rgb)
         context.drawTextWithShadow(textRenderer, "Position: ${element.targetX.toInt()}, ${element.targetY.toInt()}", x + 15, y + 25, Color.WHITE.rgb)
         context.drawTextWithShadow(textRenderer, "Scale: ${"%.1f".format(element.scale)}", x + 15, y + 40, Color.WHITE.rgb)
         context.drawTextWithShadow(textRenderer, if (element.enabled) "§aEnabled" else "§cDisabled", x + 15, y + 55, Color.WHITE.rgb)
@@ -198,7 +199,7 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
             val x = (width - textRenderer.getWidth(text)) / 2
             val y = height - 30
             context.fill(x - 5, y - 3, x + textRenderer.getWidth(text) + 5, y + 13, Color(0, 0, 0, 180).rgb)
-            context.drawTextWithShadow(textRenderer, text, x, y, Color(100, 180, 255).rgb)
+            context.drawTextWithShadow(textRenderer, text, x, y, NovaPalette.Mauve.rgb)
         }
     }
 
