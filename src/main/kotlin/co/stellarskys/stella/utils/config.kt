@@ -27,6 +27,14 @@ val config = Config("Stella", "stella") {
         }
     }
 
+    category("StellaNav") {
+        toggle {
+            configName = "mapEnabled"
+            name = "Enable Map"
+            description = "Enables the dungeon map"
+        }
+    }
+
     category( "Msc."){
         subcategory("Block Overlay")
 

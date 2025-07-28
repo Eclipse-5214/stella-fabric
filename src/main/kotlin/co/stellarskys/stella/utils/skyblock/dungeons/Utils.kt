@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import net.minecraft.util.Identifier
 import net.minecraft.resource.ResourceManager
+import java.awt.Color
 import java.io.InputStreamReader
 
 object RoomRegistry {
@@ -140,6 +141,26 @@ val roomTypeMap = mapOf(
     "rare" to RoomType.RARE,
     "spawn" to RoomType.ENTRANCE
 )
+
+val roomTypeColors = mapOf(
+    RoomType.NORMAL to Color(107 / 255f, 58 / 255f, 17 / 255f, 1f),     // Brown
+    RoomType.PUZZLE to Color(117 / 255f, 0f, 133 / 255f, 1f),            // Purple
+    RoomType.TRAP to Color(216 / 255f, 127 / 255f, 51 / 255f, 1f),       // Orange
+    RoomType.YELLOW to Color(254 / 255f, 223 / 255f, 0f, 1f),            // Yellow
+    RoomType.BLOOD to Color(1f, 0f, 0f, 1f),                             // Red
+    RoomType.FAIRY to Color(224 / 255f, 0f, 255 / 255f, 1f),             // Pink
+    RoomType.ENTRANCE to Color(20 / 255f, 133 / 255f, 0 / 255f, 1f),     // Green
+    //RoomType.SPAWN to Color(65 / 255f, 65 / 255f, 65 / 255f, 1f),        // Gray
+    //RoomType.UNIDENTIFIED to Color(0f, 0f, 0f, 1f)                       // Black fallback
+)
+
+val doorTypeColors = mapOf(
+    DoorType.NORMAL to Color(80 / 255f, 40 / 255f, 10 / 255f, 1f),     // Distinct Brown
+    DoorType.WITHER to Color(0f, 0f, 0f, 1f),                          // Black
+    DoorType.BLOOD to Color(1f, 0f, 0f, 1f),                          // Red
+    DoorType.ENTRANCE to Color(0f, 0.8f, 0f, 1f)                      // Soft Green
+)
+
 
 val mapColorToRoomType = mapOf(
     18 to RoomType.BLOOD,

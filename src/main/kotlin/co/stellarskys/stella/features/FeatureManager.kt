@@ -22,7 +22,7 @@ object FeatureManager {
 
         val features = reflections.getTypesAnnotatedWith(Stella.Module::class.java)
         val starttime = TimeUtils.now
-        val categoryOrder = listOf("dungeons", "msc")
+        val categoryOrder = listOf("dungeons", "stellanav", "msc")
 
         features.sortedWith(compareBy<Class<*>> { clazz ->
             val packageName = clazz.`package`.name

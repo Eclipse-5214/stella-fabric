@@ -1,5 +1,13 @@
 package co.stellarskys.stella.hud
 
+import gg.essential.elementa.ElementaVersion
+import gg.essential.elementa.components.UIContainer
+import gg.essential.elementa.components.UIImage
+import gg.essential.elementa.components.Window
+import gg.essential.elementa.constraints.CenterConstraint
+import gg.essential.elementa.dsl.childOf
+import gg.essential.elementa.dsl.pixels
+import gg.essential.universal.UMatrixStack
 import co.stellarskys.novaconfig.ui.NovaPalette
 import co.stellarskys.stella.hud.HUDManager.setPosition
 import co.stellarskys.stella.utils.Utils
@@ -23,9 +31,34 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
     private var showProperties = true
     private var showElements = true
     private var showToolbar = true
+    private var showResetConfirm = false
     private val undoStack = mutableListOf<Map<String, HUDPosition>>()
     private val redoStack = mutableListOf<Map<String, HUDPosition>>()
     private var dirty = false
+    private var hoveredToolbarIndex = -1
+    private val toolbarIcons = listOf(
+        "/assets/stella/logos/HUDEditor/grid.png",
+        "/assets/stella/logos/HUDEditor/snap.png",
+        "/assets/stella/logos/HUDEditor/preview.png",
+        "/assets/stella/logos/HUDEditor/props.png",
+        "/assets/stella/logos/HUDEditor/list.png",
+        "/assets/stella/logos/HUDEditor/reset.png"
+    )
+    private val toolbarTooltips = listOf(
+        "Toggle Grid",
+        "Toggle Snap to Grid",
+        "Toggle Preview Mode",
+        "Toggle Properties Panel",
+        "Toggle Element List",
+        "Reset All Elements"
+    )
+    private val window = Window(ElementaVersion.V10)
+    private val toolbarContainer = UIContainer().apply {
+        setX(10.pixels())
+        setY(5.pixels())
+        setWidth(400.pixels())
+        setHeight(20.pixels())
+    } childOf window
 
     override fun init() {
         super.init()
@@ -33,6 +66,7 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         loadElements()
         saveState()
         dirty = false
+        setupToolbarIcons()
     }
 
     override fun close() {
@@ -40,6 +74,45 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         if (dirty) {
             elements.forEach { element ->
                 setPosition(element.name, element.targetX, element.targetY, element.scale, element.enabled)
+            }
+        }
+    }
+
+    private fun setupToolbarIcons() {
+        toolbarContainer.clearChildren()
+
+        toolbarIcons.forEachIndexed { index, iconPath ->
+            val iconContainer = UIContainer().apply {
+                setX((index * 28).pixels())
+                setY(0.pixels())
+                setWidth(24.pixels())
+                setHeight(20.pixels())
+            } childOf toolbarContainer
+
+            UIImage.ofResource(iconPath).apply {
+                setX(CenterConstraint())
+                setY(CenterConstraint())
+                setWidth(16.pixels())
+                setHeight(16.pixels())
+            } childOf iconContainer
+
+            iconContainer.onMouseEnter {
+                hoveredToolbarIndex = index
+            }
+
+            iconContainer.onMouseLeave {
+                hoveredToolbarIndex = -1
+            }
+
+            iconContainer.onMouseClick { event ->
+                when (index) {
+                    0 -> showGrid = !showGrid
+                    1 -> snapToGrid = !snapToGrid
+                    2 -> previewMode = !previewMode
+                    3 -> showProperties = !showProperties
+                    4 -> showElements = !showElements
+                    5 -> showResetConfirm = true
+                }
             }
         }
     }
@@ -61,18 +134,43 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
 
         if (!previewMode) {
             if (showToolbar) {
-                drawToolbar(context, mouseX, mouseY)
+                drawToolbar(context)
+                window.draw(UMatrixStack())
             } else {
                 drawToolbarToggleTooltip(context)
             }
             if (showElements) drawElementList(context, mouseX, mouseY)
             if (showProperties) selected?.let { drawProperties(context, it) }
             drawTooltips(context)
+            if (hoveredToolbarIndex >= 0) drawToolbarTooltip(context, mouseX, mouseY, hoveredToolbarIndex)
         } else {
             drawPreviewHint(context)
         }
 
+        if (showResetConfirm) {
+            drawResetConfirmation(context, mouseX, mouseY)
+        }
+
         super.render(context, mouseX, mouseY, delta)
+    }
+
+    private fun drawToolbarTooltip(context: DrawContext, mouseX: Int, mouseY: Int, index: Int) {
+        val text = toolbarTooltips[index]
+        val textWidth = textRenderer.getWidth(text)
+        val textHeight = textRenderer.fontHeight
+        val padding = 4
+        val tooltipWidth = textWidth + padding * 2
+        val tooltipHeight = textHeight + padding * 2
+
+        var x = mouseX - tooltipWidth
+        var y = mouseY - tooltipHeight
+
+        x = x.coerceIn(0, width - tooltipWidth)
+        y = y.coerceIn(0, height - tooltipHeight)
+
+        context.fill(x, y, x + tooltipWidth, y + tooltipHeight, Color(30, 30, 40, 220).rgb)
+        drawHollowRect(context, x, y, x + tooltipWidth, y + tooltipHeight, Color(100, 180, 255, 255).rgb)
+        context.drawTextWithShadow(textRenderer, text, x + padding, y + padding, Color.WHITE.rgb)
     }
 
     private fun drawGrid(context: DrawContext) {
@@ -97,40 +195,32 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
     }
 
     private fun drawToolbarToggleTooltip(context: DrawContext) {
-        val text = "Press T to enable toolbar"
+        val text = "Press T to toggle toolbar"
         val textWidth = textRenderer.getWidth(text)
         val x = 15
         val y = 10
         context.fill(x - 5, y - 3, x + textWidth + 5, y + 13, Color(0, 0, 0, 180).rgb)
-        context.drawTextWithShadow(textRenderer, text, x, y, NovaPalette.Mauve.rgb)
+        context.drawTextWithShadow(textRenderer, text, x, y, Color(100, 180, 255).rgb)
     }
 
-    private fun drawToolbar(context: DrawContext, mouseX: Int, mouseY: Int) {
+    private fun drawToolbar(context: DrawContext) {
         val height = 30
         context.fill(0, 0, width, height, Color(20, 20, 30, 220).rgb)
-        context.fill(0, height, width, height + 2, NovaPalette.Mauve.rgb)
+        context.fill(0, height, width, height + 2, Color(70, 130, 180, 255).rgb)
 
-        val buttons = listOf("Grid", "Snap", "Preview", "Reset", "Properties", "Elements", "Toolbar")
-        val states = listOf(showGrid, snapToGrid, previewMode, false, showProperties, showElements, showToolbar)
-        var x = 15
+        val toolbarStates = listOf(showGrid, snapToGrid, previewMode, showProperties, showElements, false)
 
         val title = "Stella - HUD Editor"
         val textWidth = textRenderer.getWidth(title)
-        val titlex = width - textWidth - 15
+        val titleX = width - textWidth - 15
 
-        context.drawTextWithShadow(textRenderer, title, titlex, 10, NovaPalette.Mauve.rgb)
+        context.drawTextWithShadow(textRenderer, title, titleX, 10, Color(100, 180, 255).rgb)
 
-        buttons.forEachIndexed { index, button ->
-            val buttonWidth = textRenderer.getWidth(button) + 20
-            val hovered = mouseX in x..(x + buttonWidth) && mouseY in 0..height
-
-            if (states[index]) {
-                context.fill(x, height - 3, x + buttonWidth, height, NovaPalette.Lavender.rgb)
+        toolbarStates.forEachIndexed { index, isActive ->
+            if (isActive) {
+                val x = 10 + (index * 28)
+                context.fill(x, height - 3, x + 24, height, Color(100, 180, 255).rgb)
             }
-
-            val color = if (hovered) NovaPalette.Mauve.rgb else NovaPalette.Lavender.rgb
-            context.drawTextWithShadow(textRenderer, button, x + 10, 10, color)
-            x += buttonWidth + 10
         }
     }
 
@@ -144,9 +234,9 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         val listY = if (showToolbar) 40 else 15
 
         context.fill(listX, listY, listX + listWidth, listY + listHeight, Color(20, 20, 30, 180).rgb)
-        drawHollowRect(context, listX, listY, listX + listWidth, listY + listHeight, NovaPalette.Lavender.rgb)
+        drawHollowRect(context, listX, listY, listX + listWidth, listY + listHeight, Color(70, 130, 180, 255).rgb)
 
-        context.drawTextWithShadow(textRenderer, "HUD Elements", listX + 10, listY + 8, NovaPalette.Lavender.rgb)
+        context.drawTextWithShadow(textRenderer, "HUD Elements", listX + 10, listY + 8, Color(180, 220, 255).rgb)
 
         val scrollOffset = if (elements.size * elementHeight > listHeight - headerHeight - padding) {
             maxOf(0, elements.size * elementHeight - (listHeight - headerHeight - padding))
@@ -169,7 +259,7 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
             context.drawText(textRenderer, displayName, listX + 10, elementY + 3, nameColor, false)
 
             val toggleText = if (element.enabled) "ON" else "OFF"
-            val toggleColor = if (element.enabled) NovaPalette.Green.rgb else NovaPalette.Red.rgb
+            val toggleColor = if (element.enabled) Color(100, 220, 100).rgb else Color(220, 100, 100).rgb
             context.drawText(textRenderer, toggleText, listX + listWidth - 30, elementY + 3, toggleColor, false)
         }
     }
@@ -181,12 +271,66 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         val y = this.height - height - 15
 
         context.fill(x, y, x + width, y + height, Color(20, 20, 30, 180).rgb)
-        drawHollowRect(context, x, y, x + width, y + height, NovaPalette.Lavender.rgb)
+        drawHollowRect(context, x, y, x + width, y + height, Color(70, 130, 180, 255).rgb)
 
-        context.drawTextWithShadow(textRenderer, "Properties", x + 10, y + 10, NovaPalette.Mauve.rgb)
+        context.drawTextWithShadow(textRenderer, "Properties", x + 10, y + 10, Color(100, 180, 255).rgb)
         context.drawTextWithShadow(textRenderer, "Position: ${element.targetX.toInt()}, ${element.targetY.toInt()}", x + 15, y + 25, Color.WHITE.rgb)
         context.drawTextWithShadow(textRenderer, "Scale: ${"%.1f".format(element.scale)}", x + 15, y + 40, Color.WHITE.rgb)
         context.drawTextWithShadow(textRenderer, if (element.enabled) "§aEnabled" else "§cDisabled", x + 15, y + 55, Color.WHITE.rgb)
+    }
+
+    private fun drawResetConfirmation(context: DrawContext, mouseX: Int, mouseY: Int) {
+        val popupWidth = 280
+        val popupHeight = 120
+        val popupX = (width - popupWidth) / 2
+        val popupY = (height - popupHeight) / 2
+
+        context.matrices.push()
+        context.matrices.translate(0f, 0f, 300f)
+        context.fill(0, 0, width, height, Color(0, 0, 0, 120).rgb)
+        context.fill(popupX, popupY, popupX + popupWidth, popupY + popupHeight, Color(25, 25, 35, 240).rgb)
+        drawHollowRect(context, popupX, popupY, popupX + popupWidth, popupY + popupHeight, Color(70, 130, 180, 255).rgb)
+
+        val titleText = "Reset All Elements"
+        val titleX = popupX + (popupWidth - textRenderer.getWidth(titleText)) / 2
+        context.drawTextWithShadow(textRenderer, titleText, titleX, popupY + 15, Color(220, 100, 100).rgb)
+
+        val messageText = "This will reset all HUD elements to"
+        val messageText2 = "default positions and enable them."
+        val messageX = popupX + (popupWidth - textRenderer.getWidth(messageText)) / 2
+        val messageX2 = popupX + (popupWidth - textRenderer.getWidth(messageText2)) / 2
+        context.drawText(textRenderer, messageText, messageX, popupY + 40, Color(200, 200, 200).rgb, false)
+        context.drawText(textRenderer, messageText2, messageX2, popupY + 55, Color(200, 200, 200).rgb, false)
+
+        val buttonWidth = 80
+        val buttonHeight = 20
+        val buttonSpacing = 20
+        val confirmX = popupX + (popupWidth / 2) - buttonWidth - (buttonSpacing / 2)
+        val cancelX = popupX + (popupWidth / 2) + (buttonSpacing / 2)
+        val buttonY = popupY + popupHeight - 35
+
+        val confirmHovered = mouseX in confirmX..(confirmX + buttonWidth) && mouseY in buttonY..(buttonY + buttonHeight)
+        val cancelHovered = mouseX in cancelX..(cancelX + buttonWidth) && mouseY in buttonY..(buttonY + buttonHeight)
+
+        val confirmBg = if (confirmHovered) Color(200, 80, 80, 200).rgb else Color(170, 60, 60, 180).rgb
+        val cancelBg = if (cancelHovered) Color(60, 120, 180, 200).rgb else Color(40, 100, 160, 180).rgb
+
+        context.fill(confirmX, buttonY, confirmX + buttonWidth, buttonY + buttonHeight, confirmBg)
+        context.fill(cancelX, buttonY, cancelX + buttonWidth, buttonY + buttonHeight, cancelBg)
+
+        drawHollowRect(context, confirmX, buttonY, confirmX + buttonWidth, buttonY + buttonHeight, Color(255, 120, 120, 255).rgb)
+        drawHollowRect(context, cancelX, buttonY, cancelX + buttonWidth, buttonY + buttonHeight, Color(120, 180, 255, 255).rgb)
+
+        val confirmText = "Reset"
+        val cancelText = "Cancel"
+        val confirmTextX = confirmX + (buttonWidth - textRenderer.getWidth(confirmText)) / 2
+        val cancelTextX = cancelX + (buttonWidth - textRenderer.getWidth(cancelText)) / 2
+        val textY = buttonY + 6
+
+        context.drawTextWithShadow(textRenderer, confirmText, confirmTextX, textY, Color.WHITE.rgb)
+        context.drawTextWithShadow(textRenderer, cancelText, cancelTextX, textY, Color.WHITE.rgb)
+
+        context.matrices.pop()
     }
 
     private fun drawTooltips(context: DrawContext) {
@@ -199,7 +343,7 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
             val x = (width - textRenderer.getWidth(text)) / 2
             val y = height - 30
             context.fill(x - 5, y - 3, x + textRenderer.getWidth(text) + 5, y + 13, Color(0, 0, 0, 180).rgb)
-            context.drawTextWithShadow(textRenderer, text, x, y, NovaPalette.Mauve.rgb)
+            context.drawTextWithShadow(textRenderer, text, x, y, Color(100, 180, 255).rgb)
         }
     }
 
@@ -215,8 +359,17 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
     }
 
     override fun mouseClicked(mouseX: Double, mouseY: Double, button: Int): Boolean {
+        if (showResetConfirm) {
+            handleResetConfirmClick(mouseX.toInt(), mouseY.toInt())
+            return true
+        }
+
+        if (showToolbar) {
+            window.mouseClick(mouseX, mouseY, button)
+        }
+
         if (button == 0) {
-            if ((!showToolbar || !handleToolbarClick(mouseX.toInt(), mouseY.toInt())) && (!showElements || !handleElementListClick(mouseX.toInt(), mouseY.toInt())))
+            if ((!showToolbar || !handleToolbarClick(mouseY.toInt())) && (!showElements || !handleElementListClick(mouseX.toInt(), mouseY.toInt())))
                 handleElementDrag(mouseX.toInt(), mouseY.toInt())
         } else if (button == 1) {
             elements.reversed().find { it.isMouseOver(mouseX.toFloat(), mouseY.toFloat()) }?.let {
@@ -226,29 +379,35 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
         return super.mouseClicked(mouseX, mouseY, button)
     }
 
-    private fun handleToolbarClick(mouseX: Int, mouseY: Int): Boolean {
-        if (mouseY > 30) return false
+    private fun handleResetConfirmClick(mouseX: Int, mouseY: Int) {
+        val popupWidth = 280
+        val popupHeight = 120
+        val popupX = (width - popupWidth) / 2
+        val popupY = (height - popupHeight) / 2
 
-        val buttons = listOf("Grid", "Snap", "Preview", "Reset", "Properties", "Elements", "Toolbar")
-        var x = 15
+        val buttonWidth = 80
+        val buttonHeight = 20
+        val buttonSpacing = 20
+        val confirmX = popupX + (popupWidth / 2) - buttonWidth - (buttonSpacing / 2)
+        val cancelX = popupX + (popupWidth / 2) + (buttonSpacing / 2)
+        val buttonY = popupY + popupHeight - 35
 
-        buttons.forEach { button ->
-            val buttonWidth = textRenderer.getWidth(button) + 20
-            if (mouseX in x..(x + buttonWidth)) {
-                when (button) {
-                    "Grid" -> showGrid = !showGrid
-                    "Snap" -> snapToGrid = !snapToGrid
-                    "Preview" -> previewMode = !previewMode
-                    "Reset" -> resetAll()
-                    "Properties" -> showProperties = !showProperties
-                    "Elements" -> showElements = !showElements
-                    "Toolbar" -> showToolbar = !showToolbar
-                }
-                return true
+        when {
+            mouseX in confirmX..(confirmX + buttonWidth) && mouseY in buttonY..(buttonY + buttonHeight) -> {
+                resetAll()
+                showResetConfirm = false
             }
-            x += buttonWidth + 10
+            mouseX in cancelX..(cancelX + buttonWidth) && mouseY in buttonY..(buttonY + buttonHeight) -> {
+                showResetConfirm = false
+            }
+            mouseX !in popupX..(popupX + popupWidth) || mouseY !in popupY..(popupY + popupHeight) -> {
+                showResetConfirm = false
+            }
         }
-        return false
+    }
+
+    private fun handleToolbarClick(mouseY: Int): Boolean {
+        return mouseY <= 30
     }
 
     private fun handleElementListClick(mouseX: Int, mouseY: Int): Boolean {
@@ -305,6 +464,10 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
     }
 
     override fun mouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
+        if (showToolbar) {
+            window.mouseRelease()
+        }
+
         dragging?.let { element ->
             dragging = null
             dirty = true
@@ -313,15 +476,25 @@ class HUDEditor : Screen(Text.literal("HUD Editor")) {
     }
 
     override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
+        if (showResetConfirm) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_N) {
+                showResetConfirm = false
+            } else if (keyCode == GLFW.GLFW_KEY_Y || keyCode == GLFW.GLFW_KEY_ENTER) {
+                resetAll()
+                showResetConfirm = false
+            }
+            return true
+        }
+
         when (keyCode) {
             GLFW.GLFW_KEY_ESCAPE -> {
                 if (previewMode) previewMode = false
                 else close()
-                return false
+                return true
             }
             GLFW.GLFW_KEY_G -> showGrid = !showGrid
             GLFW.GLFW_KEY_P -> previewMode = !previewMode
-            GLFW.GLFW_KEY_R -> resetAll()
+            GLFW.GLFW_KEY_R -> showResetConfirm = true
             GLFW.GLFW_KEY_T -> showToolbar = !showToolbar
             GLFW.GLFW_KEY_Z -> if (hasControlDown()) undo()
             GLFW.GLFW_KEY_Y -> if (hasControlDown()) redo()

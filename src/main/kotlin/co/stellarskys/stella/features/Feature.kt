@@ -60,17 +60,13 @@ open class Feature(
 
     @Synchronized
     open fun onToggle(state: Boolean) {
-        ChatUtils.addMessage("$configName feture update called!")
-        ChatUtils.addMessage("feture state is $state!")
         if (state == isRegistered) return
 
         if (state) {
-            ChatUtils.addMessage("registering feature")
             events.forEach { it.register() }
             onRegister()
             isRegistered = true
         } else {
-            ChatUtils.addMessage("unrgistering feature")
             events.forEach { it.unregister() }
             onUnregister()
             isRegistered = false

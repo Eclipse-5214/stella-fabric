@@ -8,6 +8,7 @@ import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.RenderLayer.MultiPhase
 import net.minecraft.client.render.RenderLayer.MultiPhaseParameters
 import net.minecraft.client.render.RenderPhase
+import net.minecraft.client.render.block.entity.BeaconBlockEntityRenderer
 import net.minecraft.util.Identifier
 import net.minecraft.util.TriState
 import net.minecraft.util.Util
@@ -103,6 +104,42 @@ object StellaRenderLayers {
         StellaRenderPipelines.FILLED_THROUGH_WALLS,
         RenderLayer.MultiPhaseParameters.builder()
             .layering(RenderPhase.VIEW_OFFSET_Z_LAYERING)
+            .build(false)
+    )
+
+    val BEACON_BEAM_OPAQUE = RenderLayer.of(
+        "beacon_beam_opaque", 1536, false, true,
+        StellaRenderPipelines.BEACON_BEAM_OPAQUE,
+        RenderLayer.MultiPhaseParameters
+            .builder()
+            .texture(RenderPhase.Texture(BeaconBlockEntityRenderer.BEAM_TEXTURE, TriState.FALSE, false))
+            .build(false)
+    )
+
+    val BEACON_BEAM_OPAQUE_THROUGH_WALLS = RenderLayer.of(
+        "beacon_beam_opaque_through_walls", 1536, false, true,
+        StellaRenderPipelines.BEACON_BEAM_OPAQUE_THROUGH_WALLS,
+        RenderLayer.MultiPhaseParameters
+            .builder()
+            .texture(RenderPhase.Texture(BeaconBlockEntityRenderer.BEAM_TEXTURE, TriState.FALSE, false))
+            .build(false)
+    )
+
+    val BEACON_BEAM_TRANSLUCENT = RenderLayer.of(
+        "beacon_beam_translucent", 1536, false, true,
+        StellaRenderPipelines.BEACON_BEAM_TRANSLUCENT,
+        RenderLayer.MultiPhaseParameters
+            .builder()
+            .texture(RenderPhase.Texture(BeaconBlockEntityRenderer.BEAM_TEXTURE, TriState.FALSE, false))
+            .build(false)
+    )
+
+    val BEACON_BEAM_TRANSLUCENT_THROUGH_WALLS = RenderLayer.of(
+        "devonian_beacon_beam_translucent_esp",1536,false,true,
+        StellaRenderPipelines.BEACON_BEAM_TRANSLUCENT_THROUGH_WALLS,
+        RenderLayer.MultiPhaseParameters
+            .builder()
+            .texture(RenderPhase.Texture(BeaconBlockEntityRenderer.BEAM_TEXTURE, TriState.FALSE, false))
             .build(false)
     )
 

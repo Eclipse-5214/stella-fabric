@@ -26,6 +26,6 @@ object roomName : Feature("showRoomName", area = "catacombs") {
         val y = HUDManager.getY("roomname") + 5f
         val scale = HUDManager.getScale("roomname")
 
-        Render2D.renderString(context, text, x, y, scale)
+        Render2D.drawString(context, text, x.toInt(), y.toInt(), scale, false)
     }
 }

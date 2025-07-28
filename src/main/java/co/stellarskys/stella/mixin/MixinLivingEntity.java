@@ -12,10 +12,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/*
- * Modified from Devonian code
- * Under GPL 3.0 License
- */
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEntity extends Entity {
     public MixinLivingEntity(EntityType<?> type, World world) {
@@ -23,7 +19,7 @@ public abstract class MixinLivingEntity extends Entity {
     }
 
     @Inject(method = "onDeath", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;setPose(Lnet/minecraft/entity/EntityPose;)V"))
-    private void zen$onDeath(DamageSource damageSource, CallbackInfo ci) {
+    private void stella$onDeath(DamageSource damageSource, CallbackInfo ci) {
         EventBus.INSTANCE.post(new EntityEvent.Death(this));
     }
 }

@@ -44,8 +44,13 @@ dependencies {
 	include "org.reflections:reflections:0.10.2"
 
 	// Nova Config
-	modImplementation("com.github.Eclipse-5214:nova-config:$nova_version")
+	modImplementation "com.github.Eclipse-5214:nova-config:$nova_version"
 
+	// Elementa
+	modImplementation "gg.essential:elementa:$elementa_version"
+	include "gg.essential:elementa:$elementa_version"
+	modImplementation "gg.essential:universalcraft-1.21.5-fabric:$uc_version"
+	include "gg.essential:universalcraft-1.21.5-fabric:$uc_version"
 }
 
 processResources {

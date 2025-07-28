@@ -3,7 +3,6 @@ package co.stellarskys.stella.hud
 import co.stellarskys.stella.Stella.Companion.mc
 import co.stellarskys.stella.utils.TimeUtils
 import co.stellarskys.stella.utils.TimeUtils.millis
-import co.stellarskys.stella.utils.Utils
 import net.minecraft.client.gui.DrawContext
 import java.awt.Color
 import kotlin.math.pow

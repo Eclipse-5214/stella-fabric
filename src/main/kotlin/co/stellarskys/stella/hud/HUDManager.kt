@@ -16,10 +16,15 @@ object HUDManager {
         elements[name] = exampleText
     }
 
-    fun registerCustom(name: String, width: Int, height: Int, renderer: (DrawContext, Float, Float, Int, Int, Float, Float, Boolean) -> Unit) {
+    fun registerCustom(
+        name: String,
+        width: Int,
+        height: Int,
+        customRenderer: (DrawContext, Float, Float, Int, Int, Float, Float, Boolean) -> Unit
+    ) {
         elements[name] = ""
-        customRenderers[name] = renderer
-        customDimensions[name] = width to height
+        customRenderers[name] = customRenderer
+        customDimensions[name] = Pair(width, height)
     }
 
     fun getElements(): Map<String, String> = elements

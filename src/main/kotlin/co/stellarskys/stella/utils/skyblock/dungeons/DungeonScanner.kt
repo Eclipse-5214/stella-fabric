@@ -14,6 +14,7 @@ import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.skyblock.LocationUtils
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
+import java.awt.Color
 import java.util.UUID
 
 fun MutableSet<DungeonPlayer>.pushCheck(player: DungeonPlayer) {
@@ -92,11 +93,57 @@ object DungeonScanner {
         currentRoom = getRoomAt(player.x.toInt(), player.z.toInt())
     },false)
 
+    val renderRooms = DungeonScanner.rooms.filterNotNull().map { room ->
+        val comp = room.components.firstOrNull() ?: return@map null
+        val color = roomTypeColors[room.type] ?: Color(0f, 0f, 0f, 1f)
+
+        RoomRender(
+            x = comp.first * 2,
+            z = comp.second * 2,
+            color = color,
+            checkmark = room.checkmark,
+            explored = room.explored,
+            name = room.name
+        )
+    }.filterNotNull()
+
+    val renderDoors = DungeonScanner.uniqueDoors.map { door ->
+        DoorRender(
+            x = door.rxz.first,
+            z = door.rxz.second,
+            rotation = door.rotation ?: 0,
+            type = door.type,
+            opened = door.opened
+        )
+    }
+
+
     data class RoomClearInfo(
         val time: Int,
         val room: Room,
         val solo: Boolean
     )
+
+    data class RoomRender(
+        val x: Int,
+        val z: Int,
+        val width: Int = 3,
+        val height: Int = 3,
+        val color: Color,
+        val checkmark: Checkmark?,
+        val explored: Boolean,
+        val name: String?
+    )
+
+    data class DoorRender(
+        val x: Int,
+        val z: Int,
+        val rotation: Int, // 0 = horizontal, 1 = vertical
+        val color: Color,
+        val opened: Boolean
+    )
+
+
 
     init {
         //println("[DungeonScanner] Initializing!")
