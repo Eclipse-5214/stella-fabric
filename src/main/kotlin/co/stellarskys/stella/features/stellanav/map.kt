@@ -8,6 +8,7 @@ import co.stellarskys.stella.features.stellanav.utils.mapRGBs
 import co.stellarskys.stella.hud.HUDManager
 import co.stellarskys.stella.utils.render.Render2D
 import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
+import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.texture.NativeImage
@@ -23,15 +24,6 @@ object map: Feature("mapEnabled", area = "catacombs") {
     private val defaultMapSize = Pair<Int, Int>(138, 138)
 
     private val prevewMap = Identifier.of(Stella.NAMESPACE, "stellanav/defaultmap")
-    private val roomRects = mutableListOf<RoomRect>()
-
-    data class RoomRect(
-        val x: Int,
-        val y: Int,
-        val width: Int,
-        val height: Int,
-        val color: Color
-    )
 
     override fun initialize() {
         HUDManager.registerCustom(name, 148, 148, this::HUDEditorRender)
@@ -78,14 +70,17 @@ object map: Feature("mapEnabled", area = "catacombs") {
         matrix.translate(5f,5f, 0f)
         if (preview) context.drawGuiTexture({ RenderLayer.getGuiTextured(it) },prevewMap, 0, 0, 128, 128)
         else {
-            roomRects.forEach { rect ->
-                val x = rect.x
-                val y = rect.y
-                val w = rect.width
-                val h = rect.height
-                val color = rect.color
-
-                Render2D.drawRect(context, x, y, w, h, color)
+            DungeonScanner.renderRooms.forEach { room ->
+                val size = 16  // or whatever fits your map scale
+                val half = size / 2
+                Render2D.drawRect(
+                    context,
+                    room.x - half,
+                    room.z - half,
+                    size,
+                    size,
+                    room.color
+                )
             }
         }
     }

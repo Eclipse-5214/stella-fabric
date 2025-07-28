@@ -107,12 +107,13 @@ object DungeonScanner {
         )
     }.filterNotNull()
 
-    val renderDoors = DungeonScanner.uniqueDoors.map { door ->
+    val renderDoors = DungeonScanner.uniqueDoors.mapNotNull { door ->
+        val color = doorTypeColors[door.type] ?: return@mapNotNull null
         DoorRender(
-            x = door.rxz.first,
-            z = door.rxz.second,
+            x = door.getComp().first,
+            z = door.getComp().second,
             rotation = door.rotation ?: 0,
-            type = door.type,
+            color = color,
             opened = door.opened
         )
     }
