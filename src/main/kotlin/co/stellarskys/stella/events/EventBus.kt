@@ -179,11 +179,6 @@ object EventBus {
                     else -> {}
                 }
             }
-            //stella stuff
-
-            is MapUpdateS2CPacket -> {
-                Dungeon.calibrateDungeonMap()
-            }
         }
     }
 

@@ -1,5 +1,8 @@
 package co.stellarskys.stella.features.stellanav.utils
 
+import co.stellarskys.stella.Stella
+import co.stellarskys.stella.utils.skyblock.dungeons.Checkmark
+import net.minecraft.util.Identifier
 import java.awt.Color
 
 fun oscale(floor: Int?): Float {
@@ -10,6 +13,25 @@ fun oscale(floor: Int?): Float {
         else -> 1f
     }
 }
+
+val prevewMap = Identifier.of(Stella.NAMESPACE, "stellanav/defaultmap")
+
+val greenCheck = Identifier.of(Stella.NAMESPACE, "stellanav/clear/bloommapgreencheck")
+val whiteCheck =Identifier.of(Stella.NAMESPACE, "stellanav/clear/bloommapwhitecheck")
+val failedRoom = Identifier.of(Stella.NAMESPACE, "stellanav/clear/bloommapfailedroom")
+val questionMark = Identifier.of(Stella.NAMESPACE, "stellanav/clear/bloommapquestionmark")
+
+val GreenMarker = Identifier.of(Stella.NAMESPACE, "stellanav/markerself")
+val WhiteMarker = Identifier.of(Stella.NAMESPACE, "stellanav/markerother")
+
+fun getCheckmarks(checkmark: Checkmark): Identifier? = when (checkmark) {
+    Checkmark.GREEN -> greenCheck
+    Checkmark.WHITE -> whiteCheck
+    Checkmark.FAILED -> failedRoom
+    Checkmark.UNEXPLORED -> questionMark
+    else -> null
+}
+
 
 val mapRGBs = mapOf(
     18 to Color(1f, 0f, 0f, 1f),

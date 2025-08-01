@@ -3,9 +3,9 @@ package co.stellarskys.stella.utils.skyblock.dungeons
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.AreaEvent
 import co.stellarskys.stella.events.ChatEvent
-import co.stellarskys.stella.events.DungeonEvent
 import co.stellarskys.stella.events.EntityEvent
 import co.stellarskys.stella.events.EventBus
+import co.stellarskys.stella.events.PacketEvent
 import co.stellarskys.stella.events.ScoreboardEvent
 import co.stellarskys.stella.events.TablistEvent
 import co.stellarskys.stella.events.TickEvent
@@ -17,7 +17,10 @@ import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.mob.ZombieEntity
 import net.minecraft.item.FilledMapItem
 import net.minecraft.item.map.MapDecoration
+import net.minecraft.item.map.MapDecorationTypes
 import net.minecraft.item.map.MapState
+import net.minecraft.network.packet.s2c.play.MapUpdateS2CPacket
+import net.minecraft.world.tick.Tick
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -109,11 +112,13 @@ object Dungeon {
     val MapDecoration.yaw
         get() = this.rotation * 22.5f
 
-    //var mapData: Map = null
+    //Map
     var mapCorners = Pair(5, 5)
     var mapRoomSize = 16
     var mapGapSize = 0
     var coordMultiplier = 0.625
+    var mapData: MapState? = null
+    var guessMapData: MapState? = null
     var calibrated = false
 
     // dungeon
@@ -253,53 +258,32 @@ object Dungeon {
 
         })
 
-        EventBus.register<DungeonEvent.MapData>({ event ->
-            var iconOrder = partyMembers.toMutableList()
-
-            // Rotate: move first to the end
-            iconOrder.add(iconOrder.removeAt(0))
-
-            // Filter out "DEAD" players — assuming name contains "DEAD"
-            iconOrder = iconOrder.filterNot { it.contains("DEAD", ignoreCase = true) }.toMutableList()
-
-            // Bail if no one left
-            if (iconOrder.isEmpty()) return@register
-
-            event.data as AccessorMapState
-            event.data.decorationsMap.forEach { iconName, decoration ->
-                val match = Regex("^icon-(\\d+)$").find(iconName) ?: return@forEach
-                val iconNumber = match.groupValues[1].toInt()
-                val player = if (iconNumber < iconOrder.size) iconOrder[iconNumber] else null
-
-                //println("[MapStuff] $player, X: ${decoration.mapX}, y: ${decoration.mapZ}, Yaw: ${decoration.yaw}")
-
-                icons[iconName] = Icon(
-                    x = decoration.mapX,
-                    y = decoration.mapZ,
-                    yaw = decoration.yaw,
-                    player = player
-                )
+        EventBus.register<PacketEvent.Received>({ event ->
+            if (event.packet is MapUpdateS2CPacket && mapData == null) {
+                val world = Stella.mc.world ?: return@register
+                val id = event.packet.mapId.id
+                if (id and 1000 == 0) {
+                    val guess = FilledMapItem.getMapState(event.packet.mapId, world) ?: return@register
+                    if(guess.decorations.any {it.type == MapDecorationTypes.FRAME }) {
+                        guessMapData = guess
+                    }
+                }
             }
+        })
 
-            if (bloodDone) return@register
+        EventBus.register<TickEvent.Client>({ event ->
+            if (!calibrated) {
+                if (mapData == null) {
+                    mapData = getCurrentMapState()
+                }
 
-            val startX = mapCorners.first + (mapRoomSize / 2)
-            val startY = mapCorners.second + (mapRoomSize / 2) + 1
-
-            for (x in startX until 118 step (mapGapSize / 2)) {
-                for (y in startY until 118 step (mapGapSize / 2)) {
-                    val i = x + y * 128
-                    if ((i % 1).toDouble() != 0.0) break // Kotlin uses Double for mod check like JS
-                    if (event.colors.getOrNull(i) == null) continue
-
-                    val center = event.colors[i - 1]
-                    val roomColor = event.colors.getOrNull(i + 5 + 128 * 4) ?: continue
-
-                    if (roomColor != 18.toByte()) continue
-                    //bloodOpen = true
-
-                    if (center != 30.toByte()) continue
-                    bloodDone = true
+                calibrated = calibrateDungeonMap()
+            } else if (!inBoss()) {
+                (mapData ?: guessMapData)?.let {
+                    updatePlayersFromMap(it)
+                    //DungeonScanner.updateRoomsFromMap(it)
+                    DungeonScanner.scanFromMap(it)
+                    checkBloodDone(it)
                 }
             }
         })
@@ -329,6 +313,9 @@ object Dungeon {
         mapCorners = Pair(5, 5)
         mapRoomSize = 16
         mapGapSize = 0
+        mapData = null
+        guessMapData = null
+        calibrated = false
         floor = null
         floorNumber = null
         secretsFound = 0
@@ -493,8 +480,6 @@ object Dungeon {
         mapCorners = x to z
         coordMultiplier = mapGapSize / roomDoorCombinedSize.toDouble()
 
-        EventBus.post(DungeonEvent.MapData(mapState, mapState.colors))
-        //println("[MapCalib] roomSize=$mapRoomSize, gapSize=$mapGapSize, corners=$mapCorners, multiplier=$coordMultiplier")
         return true
     }
 
@@ -517,6 +502,60 @@ object Dungeon {
         return null
     }
 
+    fun updatePlayersFromMap(state: MapState) {
+        var iconOrder = partyMembers.toMutableList()
+
+        // Rotate: move first to the end
+        iconOrder.add(iconOrder.removeAt(0))
+
+        // Filter out "DEAD" players — assuming name contains "DEAD"
+        iconOrder = iconOrder.filterNot { it.contains("DEAD", ignoreCase = true) }.toMutableList()
+
+        // Bail if no one left
+        if (iconOrder.isEmpty()) return
+
+        state as AccessorMapState
+        state.decorationsMap.forEach { iconName, decoration ->
+            val match = Regex("^icon-(\\d+)$").find(iconName) ?: return@forEach
+            val iconNumber = match.groupValues[1].toInt()
+            val player = if (iconNumber < iconOrder.size) iconOrder[iconNumber] else null
+
+            //println("[MapStuff] $player, X: ${decoration.mapX}, y: ${decoration.mapZ}, Yaw: ${decoration.yaw}")
+
+            icons[iconName] = Icon(
+                x = decoration.mapX,
+                y = decoration.mapZ,
+                yaw = decoration.yaw + 180f,
+                player = player
+            )
+        }
+
+        DungeonScanner.updatePlayersFromMap()
+    }
+
+    fun checkBloodDone(state: MapState) {
+        if (bloodDone) return
+
+        val startX = mapCorners.first + (mapRoomSize / 2)
+        val startY = mapCorners.second + (mapRoomSize / 2) + 1
+
+        for (x in startX until 118 step (mapGapSize / 2)) {
+            for (y in startY until 118 step (mapGapSize / 2)) {
+                val i = x + y * 128
+                if ((i % 1).toDouble() != 0.0) break // Kotlin uses Double for mod check like JS
+                if (state.colors.getOrNull(i) == null) continue
+
+                val center = state.colors[i - 1]
+                val roomColor = state.colors.getOrNull(i + 5 + 128 * 4) ?: continue
+
+                if (roomColor != 18.toByte()) continue
+                //bloodOpen = true
+
+                if (center != 30.toByte()) continue
+                bloodDone = true
+            }
+        }
+    }
     //internal helpers
     private fun extractInt(key: String, msg: String, fallback: Int): Int {
         val match = regexes[key]!!.find(msg) ?: return fallback

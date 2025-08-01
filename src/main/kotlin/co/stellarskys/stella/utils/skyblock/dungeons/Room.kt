@@ -36,11 +36,12 @@ class Room(
     val components = mutableListOf<Pair<Int, Int>>()
     val realComponents = mutableListOf<Pair<Int, Int>>()
     val cores = mutableListOf<Int>()
+    val initcomp = initialComponent
 
     var roomData: RoomMetadata? = null
     var shape: String = "1x1"
     var explored = false
-    var checkmark = Checkmark.UNEXPLORED
+    var checkmark = Checkmark.UNDISCOVERED
     var players: MutableSet<DungeonPlayer> = mutableSetOf()
 
     var name: String? = null

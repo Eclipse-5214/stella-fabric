@@ -1,11 +1,13 @@
 package co.stellarskys.stella.utils.skyblock.dungeons
 
 import co.stellarskys.stella.Stella
+import co.stellarskys.stella.utils.LegIDs
 import co.stellarskys.stella.utils.WorldUtils
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import net.minecraft.util.Identifier
 import net.minecraft.resource.ResourceManager
+import net.minecraft.util.math.BlockPos
 import java.awt.Color
 import java.io.InputStreamReader
 
@@ -60,20 +62,34 @@ val directions = listOf(
 
 val defaultMapSize = Pair(125, 125)
 
-fun hashCode(s: String): Int {
-    return s.fold(0) { acc, c -> (acc shl 5) - acc + c.code }
-}
-
-val blacklistedIds = setOf(101, 54) // Add more block IDs if needed
+val blacklist = setOf(5, 54, 146)
 
 fun getCore(x: Int, z: Int): Int {
-    val ids = buildString {
-        for (y in 140 downTo 12) {
-            val id = WorldUtils.getBlockNumericId(x, y, z)
-            append(if (id in blacklistedIds) "0" else id.toString())
+    val sb = StringBuilder(150)
+    val chunk = Stella.mc.world!!.getChunk(x shr 4, z shr 4)
+    val height = getHighestY(x, z)?.coerceIn(11..140) ?: 140 .coerceIn(11..140)
+
+    sb.append(CharArray(140 - height) { '0' })
+    var bedrock = 0
+
+    for (y in height downTo 12) {
+        val blockState = chunk.getBlockState(BlockPos(x, y, z))
+        val id = if (blockState.isAir) 0 else LegIDs.getLegacyId(blockState)
+
+        if (id == 0 && bedrock >= 2 && y < 69) {
+            sb.append(CharArray(y - 11) { '0' })
+            break
         }
+
+        if (id == 7) {
+            bedrock++
+        } else {
+            bedrock = 0
+            if (id in blacklist) continue
+        }
+        sb.append(id)
     }
-    return hashCode(ids)
+    return sb.toString().hashCode()
 }
 
 fun getHighestY(x: Int, z: Int): Int? {
@@ -123,12 +139,15 @@ fun getRoomShape(comps: List<Pair<Int, Int>>): String {
 }
 
 enum class DoorType { NORMAL, WITHER, BLOOD, ENTRANCE }
+enum class DoorState { UNDISCOVERED, DISCOVERED }
 enum class ClearType { MOB, MINIBOSS }
-enum class Checkmark { NONE, WHITE, GREEN, FAILED, UNEXPLORED }
+enum class Checkmark { NONE, WHITE, GREEN, FAILED, UNEXPLORED, UNDISCOVERED }
 
 enum class RoomType {
-    NORMAL, PUZZLE, TRAP, YELLOW, BLOOD, FAIRY, RARE, ENTRANCE, UNKNOWN
+    NORMAL, PUZZLE, TRAP, YELLOW, BLOOD, FAIRY, RARE, ENTRANCE, UNKNOWN;
 }
+
+
 
 val roomTypeMap = mapOf(
     "mobs" to RoomType.NORMAL,

@@ -7,6 +7,7 @@ class Door(val worldPos: Pair<Int, Int>, val componentPos: Pair<Int, Int>) {
     var opened: Boolean = false
     var rotation: Int? = null
     var type: DoorType = DoorType.NORMAL
+    var state = DoorState.UNDISCOVERED
 
     init {
         if (worldPos.first != 0 && worldPos.second != 0) {
@@ -24,6 +25,11 @@ class Door(val worldPos: Pair<Int, Int>, val componentPos: Pair<Int, Int>) {
 
     fun setType(type: DoorType): Door {
         this.type = type
+        return this
+    }
+
+    fun setState(state: DoorState): Door {
+        this.state = state
         return this
     }
 

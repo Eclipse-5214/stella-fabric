@@ -1,6 +1,5 @@
 package co.stellarskys.stella.utils.skyblock.dungeons
 
-import co.stellarskys.novaconfig.utils.chatutils
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.AreaEvent
 import co.stellarskys.stella.events.DungeonEvent
@@ -10,10 +9,10 @@ import co.stellarskys.stella.utils.ChatUtils
 import co.stellarskys.stella.utils.CommandUtils
 import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.WorldUtils
-import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.skyblock.LocationUtils
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
+import net.minecraft.item.map.MapState
 import java.awt.Color
 import java.util.UUID
 
@@ -22,6 +21,26 @@ fun MutableSet<DungeonPlayer>.pushCheck(player: DungeonPlayer) {
         add(player)
     }
 }
+
+fun MutableSet<Room>.pushCheck(room: Room) {
+    if (room !in this) {
+        add(room)
+    }
+}
+
+fun MutableSet<DungeonScanner.DiscoveredRoom>.pushCheck(room: DungeonScanner.DiscoveredRoom) {
+    if (room !in this) {
+        add(room)
+    }
+}
+
+fun MutableSet<DungeonScanner.RoomTest>.pushCheck(room: DungeonScanner.RoomTest) {
+    if (room !in this) {
+        add(room)
+    }
+}
+
+
 
 fun MutableMap<Room, Long>.pushCheck(room: Room, defaultTime: Long = 0L) {
     this.putIfAbsent(room, defaultTime)
@@ -39,12 +58,14 @@ fun clampMap(n: Double, inMin: Double, inMax: Double, outMin: Double, outMax: Do
 object DungeonScanner {
     val availableComponents = getScanCoords().toMutableList()
     val rooms = Array<Room?>(36) { null }
-    val doors = Array<Any?>(60) { null } // TODO: Replace Any? with Door class
+    val doors = Array<Door?>(60) { null }
     val uniqueRooms = mutableSetOf<Room>()
-    val uniqueDoors = mutableSetOf<Door>() // TODO: Replace Any with Door class
-    val players = mutableListOf<DungeonPlayer>() // TODO: Replace Any with DungeonPlayer class
+    val uniqueDoors = mutableSetOf<Door>()
+    val discoveredRooms = mutableSetOf<DiscoveredRoom>()
+    val players = mutableListOf<DungeonPlayer>()
 
     var currentRoom: Room? = null
+    var currentDoor: Door? = null
     var lastIdx: Int? = null
 
     // TODO: room enter/leave listener
@@ -91,33 +112,11 @@ object DungeonScanner {
 
         lastIdx = idx
         currentRoom = getRoomAt(player.x.toInt(), player.z.toInt())
+        currentRoom?.explored = true
+
+        currentDoor = getDoorAt(player.x.toInt(), player.z.toInt())
+
     },false)
-
-    val renderRooms = DungeonScanner.rooms.filterNotNull().map { room ->
-        val comp = room.components.firstOrNull() ?: return@map null
-        val color = roomTypeColors[room.type] ?: Color(0f, 0f, 0f, 1f)
-
-        RoomRender(
-            x = comp.first * 2,
-            z = comp.second * 2,
-            color = color,
-            checkmark = room.checkmark,
-            explored = room.explored,
-            name = room.name
-        )
-    }.filterNotNull()
-
-    val renderDoors = DungeonScanner.uniqueDoors.mapNotNull { door ->
-        val color = doorTypeColors[door.type] ?: return@mapNotNull null
-        DoorRender(
-            x = door.getComp().first,
-            z = door.getComp().second,
-            rotation = door.rotation ?: 0,
-            color = color,
-            opened = door.opened
-        )
-    }
-
 
     data class RoomClearInfo(
         val time: Int,
@@ -125,26 +124,19 @@ object DungeonScanner {
         val solo: Boolean
     )
 
-    data class RoomRender(
+    data class DiscoveredRoom(
         val x: Int,
         val z: Int,
-        val width: Int = 3,
-        val height: Int = 3,
-        val color: Color,
-        val checkmark: Checkmark?,
-        val explored: Boolean,
-        val name: String?
+        val room: Room,
     )
 
-    data class DoorRender(
+    data class RoomTest(
         val x: Int,
         val z: Int,
-        val rotation: Int, // 0 = horizontal, 1 = vertical
-        val color: Color,
-        val opened: Boolean
+        val center: Int,
+        val rcolor: Int,
+        val idx: Int,
     )
-
-
 
     init {
         //println("[DungeonScanner] Initializing!")
@@ -159,73 +151,6 @@ object DungeonScanner {
                 //println("[DungeonScanner] Registering Scanner")
                 tickRegister.register()
             }
-        })
-
-        EventBus.register<DungeonEvent.MapData>({ event ->
-            for ((k, v) in Dungeon.icons) {
-                val player = players.find { it.name == v.player }
-                if (player == null || player.inRender) continue
-
-                player.iconX = clampMap(v.x.toDouble() / 2 - Dungeon.mapCorners.first.toDouble(), 0.0, Dungeon.mapRoomSize.toDouble() * 6 + 20.0, 0.0, defaultMapSize.first.toDouble())
-                player.iconZ = clampMap(v.y.toDouble() / 2 - Dungeon.mapCorners.second.toDouble(), 0.0, Dungeon.mapRoomSize.toDouble() * 6 + 20.0, 0.0, defaultMapSize.second.toDouble())
-                player.realX = clampMap(player.iconX!!, 0.0, 125.0, -200.0, -10.0)
-                player.realZ = clampMap(player.iconZ!!, 0.0, 125.0, -200.0, -10.0)
-                player.rotation = v.yaw
-                player.currentRoom = getRoomAt(player.realX!!.toInt(), player.realZ!!.toInt())
-                player.currentRoom?.players?.pushCheck(player)
-
-                //println(player.toString())
-            }
-
-            val colors = event.colors
-
-            for (room in rooms) {
-                if (room == null || room.components.isEmpty()) continue
-                //println("cheaking room: ${room.name}")
-
-                val (x, z) = room.components[0]
-                val mx = Dungeon.mapCorners.first + Dungeon.mapRoomSize / 2 + Dungeon.mapGapSize * x
-                val my = Dungeon.mapCorners.second + Dungeon.mapRoomSize / 2 + 1 + Dungeon.mapGapSize * z
-                val idx = mx + my * 128
-
-                val center = colors.getOrNull(idx - 1) ?: continue
-                val rcolor = colors.getOrNull(idx + 5 + 128 * 4) ?: continue
-
-                if (rcolor == 0.toByte() || rcolor == 85.toByte()) {
-                    room.explored = false
-                   // println("room not explored!")
-                    continue
-                }
-
-                room.explored = true
-
-                if (room.type == RoomType.NORMAL && room.height == null) {
-                    room.loadFromMapColor(rcolor)
-                    //println("loading from map!")
-                }
-
-                var check: Checkmark? = null
-                when {
-                    center == 30.toByte() && rcolor != 30.toByte() -> {
-                        if (room.checkmark != Checkmark.GREEN) roomCleared(room, Checkmark.GREEN)
-                        check = Checkmark.GREEN
-                        //println("room fully cleared!")
-                    }
-                    center == 34.toByte() -> {
-                        if (room.checkmark != Checkmark.WHITE) roomCleared(room, Checkmark.WHITE)
-                        check = Checkmark.WHITE
-                        //println("room cleared")
-                    }
-                    center == 18.toByte() && rcolor != 18.toByte() -> check = Checkmark.FAILED
-                    room.checkmark == Checkmark.UNEXPLORED -> check = Checkmark.NONE
-                }
-
-                //println("final verdict $check")
-                room.checkmark = check?: return@register
-
-                //println("[MapStuff] Room ${room.name} has a checkmark of ${room.checkmark}")
-            }
-
         })
     }
 
@@ -257,6 +182,7 @@ object DungeonScanner {
         doors.fill(null)
         uniqueRooms.clear()
         uniqueDoors.clear()
+        discoveredRooms.clear()
         currentRoom = null
         lastIdx = null
         players.clear()
@@ -268,21 +194,24 @@ object DungeonScanner {
         for (idx in availableComponents.indices.reversed()) {
             val (cx, cz, rxz) = availableComponents[idx]
             val (rx, rz) = rxz
-            if (!isChunkLoaded(rx,0,rz) || getHighestY(rx, rz) == null)  continue
-
-            availableComponents.removeAt(idx)
+            if (!isChunkLoaded(rx,0,rz)) continue
             val roofHeight = getHighestY(rx, rz) ?: continue
+            availableComponents.removeAt(idx)
 
             // Door detection
             if (cx % 2 == 1 || cz % 2 == 1) {
-                if(roofHeight < 85){
-                    val door = Door(rx to rz, cx to cz)
+                if (roofHeight < 85) {
+                    val comp = cx to cz
+                    val doorIdx = getDoorIdx(comp)
+                    val existingDoor = getDoorAtIdx(doorIdx)
 
-                    if (cz % 2 == 1) door.rotation = 0
-                    addDoor(door)
-                    //println("[DungeonScanner] Added door: ${door.type.toString()}")
+                    if (existingDoor == null) {
+                        val door = Door(rx to rz, comp).apply {
+                            rotation = if (cz % 2 == 1) 0 else 1
+                        }
+                        addDoor(door)
+                    }
                 }
-
                 continue
             }
 
@@ -290,28 +219,32 @@ object DungeonScanner {
             val z = cz / 2
             val idx = getRoomIdx(x to z)
 
-            val room = Room(x to z, roofHeight).scan()
-            //println("[DungeonScanner] Added Room ${room.name}")
-            rooms[idx] = room
-            uniqueRooms += room
+            var room = rooms[idx]
 
-            // Scan neighboring components
-            for ((dx, dz, cxoff, zoff) in directions.map { list ->
-                val (a, b, c, d) = list
-                arrayOf(a, b, c, d)
-            }) {
+            if (room != null) {
+                if (room.height == null) room.height = roofHeight
+                room.scan()
+                println("[DungeonScanner] Room ${room.name} already exists!")
+            } else {
+                room = Room(x to z, roofHeight).scan()
+                println("[DungeonScanner] Added Room ${room.name}")
+
+                rooms[idx] = room
+                uniqueRooms.pushCheck(room)
+            }
+
+            // Scan neighbors *before* claiming this room index
+            for ((dx, dz, cxoff, zoff) in directions.map { it }) {
                 val nx = rx + dx
                 val nz = rz + dz
-
                 val blockBelow = WorldUtils.getBlockNumericId(nx, roofHeight, nz)
                 val blockAbove = WorldUtils.getBlockNumericId(nx, roofHeight + 1, nz)
 
                 if (room.type == RoomType.ENTRANCE && blockBelow != 0) {
-                    // TODO: check for entrance doors using a height-based test
+                    println("entrance stuff")
                     continue
                 }
-
-                if (blockBelow != 0 || blockAbove == 0) continue
+                if (blockBelow == 0 || blockAbove != 0) continue
 
                 val neighborComp = Pair(x + cxoff, z + zoff)
                 val neighborIdx = getRoomIdx(neighborComp)
@@ -433,19 +366,28 @@ object DungeonScanner {
     fun checkPlayerState(ticks: Int) {
         val world = Stella.mc.world ?: return
 
+        // Sync missing players before comparison
+        for (v in Dungeon.partyMembers) {
+            val isAlreadyTracked = players.any { it.name == v }
+            val playerObj = world.players.firstOrNull { it.name.string == v }
+            val ping = Stella.mc.networkHandler?.getPlayerListEntry(playerObj?.uuid ?: UUID(0, 0))?.latency ?: -1
+
+            if (isAlreadyTracked || ping == -1) continue
+
+            players.add(DungeonPlayer(v))
+        }
+
         if (players.size != Dungeon.partyMembers.size) return
 
         for (v in players) {
-            val p = world.players.firstOrNull { it.name.string == v.name }
+            val p = world.players.find { it.name.string == v.name }
             val ping = Stella.mc.networkHandler?.getPlayerListEntry(p?.uuid ?: UUID(0, 0))?.latency ?: -1
 
-            if (ticks != 0 && ticks % 4 == 0 && p != null) {
-                if (ping != -1) {
-                    v.inRender = true
-                    onPlayerMove(v, p.x, p.z, p.yaw)
-                } else {
+            if (ping != -1 && p != null) {
+                v.inRender = true
+                onPlayerMove(v, p.x, p.z, p.yaw)
+            } else {
                     v.inRender = false
-                }
             }
 
             if (ping == -1) continue
@@ -467,12 +409,127 @@ object DungeonScanner {
             v.lastRoom = currRoom
         }
     }
-
     fun getExploredRooms(): List<Room> {
         return rooms.filterNotNull().filter { it.explored }.distinct()
     }
 
+    // MapStuff
+    fun updatePlayersFromMap(){
+        for ((k, v) in Dungeon.icons) {
+            val player = players.find { it.name == v.player }
+            if (player == null || player.inRender) continue
+
+            player.iconX = clampMap(v.x.toDouble() - Dungeon.mapCorners.first.toDouble(), 0.0, Dungeon.mapRoomSize.toDouble() * 6 + 20.0, 0.0, defaultMapSize.first.toDouble())
+            player.iconZ = clampMap(v.y.toDouble() - Dungeon.mapCorners.second.toDouble(), 0.0, Dungeon.mapRoomSize.toDouble() * 6 + 20.0, 0.0, defaultMapSize.second.toDouble())
+            player.realX = clampMap(player.iconX!!, 0.0, 125.0, -200.0, -10.0)
+            player.realZ = clampMap(player.iconZ!!, 0.0, 125.0, -200.0, -10.0)
+            player.rotation = v.yaw
+            player.currentRoom = getRoomAt(player.realX!!.toInt(), player.realZ!!.toInt())
+            player.currentRoom?.players?.pushCheck(player)
+
+
+            //println(player.toString())
+        }
+    }
+
+     fun scanFromMap(state: MapState) {
+        val colors = state.colors
+
+        var cx = -1
+        for (x in Dungeon.mapCorners.first + Dungeon.mapRoomSize / 2 until 118 step Dungeon.mapGapSize / 2) {
+            var cz = -1
+            cx++
+            for (z in Dungeon.mapCorners.second + Dungeon.mapRoomSize / 2 + 1 until 118 step Dungeon.mapGapSize / 2) {
+                cz++
+                val idx = x + z * 128
+                val center = colors.getOrNull(idx - 1) ?: continue
+                val rcolor = colors.getOrNull(idx + 5 + 128 * 4) ?: continue
+
+                // 🎯 Room center (even/even grid)
+                if (cx % 2 == 0 && cz % 2 == 0 && rcolor != 0.toByte()) {
+                    val rmx = cx / 2
+                    val rmz = cz / 2
+                    val roomIdx = getRoomIdx(rmx to rmz)
+                    val room = rooms[roomIdx] ?: Room(rmx to rmz).also { rooms[roomIdx] = it }
+
+                    if (room.type == RoomType.NORMAL && room.height == null) {
+                        room.loadFromMapColor(rcolor)
+                    }
+
+                    if (rcolor == 0.toByte()) {
+                        room.explored = false
+                        continue
+                    }
+
+                    if (center == 119.toByte() || rcolor == 85.toByte()) {
+                        room.explored = false
+                        room.checkmark = Checkmark.UNEXPLORED
+                        discoveredRooms += DiscoveredRoom(x = rmx, z = rmz, room = room)
+                        continue
+                    }
+
+                    // ✅ Checkmark logic
+                    var check: Checkmark? = null
+                    when {
+                        center == 30.toByte() && rcolor != 30.toByte() -> {
+                            if (room.checkmark != Checkmark.GREEN) roomCleared(room, Checkmark.GREEN)
+                            check = Checkmark.GREEN
+                        }
+                        center == 34.toByte() -> {
+                            if (room.checkmark != Checkmark.WHITE) roomCleared(room, Checkmark.WHITE)
+                            check = Checkmark.WHITE
+                        }
+                        center == 18.toByte() && rcolor != 18.toByte() -> check = Checkmark.FAILED
+                        room.checkmark == Checkmark.UNEXPLORED -> check = Checkmark.NONE
+                    }
+
+                    check?.let { room.checkmark = it }
+                    room.explored = true
+                    continue
+                }
+
+                // 🚪 Door detection (odd coordinate pairing)
+                if ((cx % 2 != 0 || cz % 2 != 0) && center != 0.toByte()) {
+                    val horiz = listOf(
+                        colors.getOrNull(idx - 128 - 4) ?: 0,
+                        colors.getOrNull(idx - 128 + 4) ?: 0
+                    )
+                    val vert = listOf(
+                        colors.getOrNull(idx - 128 * 5) ?: 0,
+                        colors.getOrNull(idx + 128 * 3) ?: 0
+                    )
+
+                    val isDoor = horiz.all { it == 0.toByte() } || vert.all { it == 0.toByte() }
+                    if (!isDoor) continue // skip false doors
+
+                    val comp = cx to cz
+                    val doorIdx = getDoorIdx(comp)
+                    val door = getDoorAtIdx(doorIdx)
+
+                    val rx = cornerStart.first + halfRoomSize + cx * halfCombinedSize
+                    val rz = cornerStart.second + halfRoomSize + cz * halfCombinedSize
+
+                    if (door == null) {
+                        val newDoor = Door(rx to rz, comp).apply {
+                            rotation = if (cz % 2 == 1) 0 else 1
+                            type = when (center.toInt()) {
+                                119 -> DoorType.WITHER
+                                63 -> DoorType.BLOOD
+                                else -> DoorType.NORMAL
+                            }
+                            setState(DoorState.DISCOVERED)
+                        }
+                        addDoor(newDoor)
+                    } else {
+                        door.setState(DoorState.DISCOVERED)
+                    }
+                }
+            }
+        }
+    }
 }
+
+
 
 @Stella.Command
 object DsDebug : CommandUtils(
