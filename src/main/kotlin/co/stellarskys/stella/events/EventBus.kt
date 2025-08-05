@@ -179,6 +179,9 @@ object EventBus {
                     else -> {}
                 }
             }
+            is GameMessageS2CPacket -> {
+
+            }
         }
     }
 

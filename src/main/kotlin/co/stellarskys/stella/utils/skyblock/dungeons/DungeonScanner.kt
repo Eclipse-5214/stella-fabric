@@ -2,6 +2,7 @@ package co.stellarskys.stella.utils.skyblock.dungeons
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.AreaEvent
+import co.stellarskys.stella.events.ChatEvent
 import co.stellarskys.stella.events.DungeonEvent
 import co.stellarskys.stella.events.EventBus
 import co.stellarskys.stella.events.TickEvent
@@ -12,6 +13,8 @@ import co.stellarskys.stella.utils.WorldUtils
 import co.stellarskys.stella.utils.skyblock.LocationUtils
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
+import net.minecraft.client.util.DefaultSkinHelper
+import net.minecraft.entity.player.PlayerModelPart
 import net.minecraft.item.map.MapState
 import java.awt.Color
 import java.util.UUID
@@ -152,6 +155,7 @@ object DungeonScanner {
                 tickRegister.register()
             }
         })
+
     }
 
     fun onPlayerMove(entity: DungeonPlayer?, x: Double, z: Double, yaw: Float) {
@@ -370,17 +374,24 @@ object DungeonScanner {
         for (v in Dungeon.partyMembers) {
             val isAlreadyTracked = players.any { it.name == v }
             val playerObj = world.players.firstOrNull { it.name.string == v }
-            val ping = Stella.mc.networkHandler?.getPlayerListEntry(playerObj?.uuid ?: UUID(0, 0))?.latency ?: -1
+            val entry = Stella.mc.networkHandler?.getPlayerListEntry(playerObj?.uuid ?: UUID(0, 0))
+            val ping = entry?.latency ?: -1
+            val skinTexture = entry?.skinTextures?.texture ?: DefaultSkinHelper.getTexture()
 
             if (isAlreadyTracked || ping == -1) continue
 
-            players.add(DungeonPlayer(v))
+            players.add(DungeonPlayer(v).apply { skin = skinTexture })
         }
 
         if (players.size != Dungeon.partyMembers.size) return
 
         for (v in players) {
             val p = world.players.find { it.name.string == v.name }
+
+            val hasHat = p?.isPartVisible(PlayerModelPart.HAT) ?: false
+
+            v.hat = hasHat
+
             val ping = Stella.mc.networkHandler?.getPlayerListEntry(p?.uuid ?: UUID(0, 0))?.latency ?: -1
 
             if (ping != -1 && p != null) {
@@ -409,6 +420,7 @@ object DungeonScanner {
             v.lastRoom = currRoom
         }
     }
+
     fun getExploredRooms(): List<Room> {
         return rooms.filterNotNull().filter { it.explored }.distinct()
     }

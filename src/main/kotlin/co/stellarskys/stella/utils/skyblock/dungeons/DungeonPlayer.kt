@@ -1,5 +1,7 @@
 package co.stellarskys.stella.utils.skyblock.dungeons
 
+import net.minecraft.client.util.DefaultSkinHelper
+import net.minecraft.util.Identifier
 import kotlin.collections.mutableSetOf
 
 class DungeonPlayer(val name: String) {
@@ -11,6 +13,8 @@ class DungeonPlayer(val name: String) {
     var realX: Double? = null
     var realZ: Double? = null
     var currentRoom: Room? = null
+    var skin: Identifier = DefaultSkinHelper.getTexture()
+    var hat: Boolean = false
 
     val visitedRooms = mutableMapOf<Room, Long>() // replace with actual types if needed
 

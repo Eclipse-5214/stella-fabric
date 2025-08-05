@@ -50,6 +50,7 @@ class Room(
     var type: RoomType = RoomType.UNKNOWN
     var clear: ClearType? = null
     var secrets: Int = 0
+    var secretsFound: Int = 0
     var crypts: Int = 0
 
     init {

@@ -1,6 +1,9 @@
 package co.stellarskys.stella.utils
 
 import co.stellarskys.stella.Stella
+import gg.essential.elementa.UIComponent
+import gg.essential.elementa.components.UIBlock
+import gg.essential.elementa.components.UIRoundedRectangle
 import net.minecraft.block.Block
 import net.minecraft.block.BlockState
 import net.minecraft.client.MinecraftClient
@@ -12,6 +15,7 @@ import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.sound.SoundEvent
 import net.minecraft.text.Text
 import net.minecraft.util.math.BlockPos
+import org.apache.commons.lang3.SystemUtils
 
 object Utils {
     private val emoteRegex = "[^\\u0000-\\u007F]".toRegex()
@@ -70,6 +74,10 @@ object Utils {
         val a = if (hasAlpha) (this[3] * 255f + 0.5f).toInt() and 0xFF else 0xFF
 
         return (a shl 24) or (r shl 16) or (g shl 8) or b
+    }
+
+    fun createBlock(radius: Float = 0f): UIComponent {
+        return if (SystemUtils.IS_OS_MAC_OSX) UIBlock() else UIRoundedRectangle(radius)
     }
 
     inline fun <reified R> Any.getField(name: String): R = javaClass.getDeclaredField(name).apply { isAccessible = true }[this] as R

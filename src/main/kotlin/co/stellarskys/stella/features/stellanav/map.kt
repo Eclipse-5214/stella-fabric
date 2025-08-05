@@ -1,56 +1,54 @@
 package co.stellarskys.stella.features.stellanav
 
 import co.stellarskys.stella.Stella
-import co.stellarskys.stella.events.DungeonEvent
 import co.stellarskys.stella.events.GuiEvent
+import co.stellarskys.stella.events.TickEvent
 import co.stellarskys.stella.features.Feature
-import co.stellarskys.stella.features.stellanav.utils.GreenMarker
-import co.stellarskys.stella.features.stellanav.utils.WhiteMarker
-import co.stellarskys.stella.features.stellanav.utils.getCheckmarks
-import co.stellarskys.stella.features.stellanav.utils.mapRGBs
-import co.stellarskys.stella.features.stellanav.utils.prevewMap
-import co.stellarskys.stella.features.stellanav.utils.questionMark
+import co.stellarskys.stella.features.stellanav.utils.*
 import co.stellarskys.stella.hud.HUDManager
 import co.stellarskys.stella.utils.ChatUtils
 import co.stellarskys.stella.utils.CommandUtils
 import co.stellarskys.stella.utils.render.Render2D
-import co.stellarskys.stella.utils.skyblock.dungeons.Checkmark
-import co.stellarskys.stella.utils.skyblock.dungeons.DoorState
-import co.stellarskys.stella.utils.skyblock.dungeons.DoorType
-import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
-import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
-import co.stellarskys.stella.utils.skyblock.dungeons.Room
-import co.stellarskys.stella.utils.skyblock.dungeons.doorTypeColors
-import co.stellarskys.stella.utils.skyblock.dungeons.roomTypeColors
+import co.stellarskys.stella.utils.render.Render2D.width
+import co.stellarskys.stella.utils.skyblock.dungeons.*
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.render.RenderLayer
-import net.minecraft.client.texture.NativeImage
-import net.minecraft.util.Identifier
 import net.minecraft.util.math.RotationAxis
 import java.awt.Color
-import java.awt.image.BufferedImage
 
 @Stella.Module
 object map: Feature("mapEnabled", area = "catacombs") {
     private const val name = "StellaNav"
     //val mapInfoUnder = config["mapInfoUnder"] as Boolean
-    private val mapInfoUnder = false
+    private val mapInfoUnder = true
+    private val playerIcons = true
     private val defaultMapSize = Pair<Int, Int>(138, 138)
     private val roomSize = 18
     private val gapSize = 4
     private val spacing = roomSize + gapSize // 18 + 4 = 22
 
+    private var mapLine1 = ""
+    private var mapLine2 = ""
+
     override fun initialize() {
         HUDManager.registerCustom(name, 148, 148, this::HUDEditorRender)
 
         register<GuiEvent.HUD> { event ->
-            if (HUDManager.isEnabled(name)) RenderMap(event.context, false)
+            if (HUDManager.isEnabled(name)) RenderMap(event.context)
         }
 
-        register<DungeonEvent.MapData> { event ->
-            if (Dungeon.inBoss()) return@register
+        register<TickEvent.Client> { event ->
+            val dSecrets = "§7Secrets: " + "§b${Dungeon.secretsFound}§8-§e${Dungeon.scoreData.secretsRemaining}§8-§c${Dungeon.scoreData.totalSecrets}"
+            val dCrypts = "§7Crypts: " + when {Dungeon.crypts >= 5 -> "§a${Dungeon.crypts}"; Dungeon.crypts > 0 -> "§e${Dungeon.crypts}"; else -> "§c0" }
+            val dMimic = if (Dungeon.floorNumber in listOf(6, 7)) { "§7Mimic: " + if (Dungeon.mimicDead) "§a✔" else "§c✘" } else { "" }
+            val minSecrets = "§7Min Secrets: " + if (Dungeon.secretsFound == 0) { "§b?" } else if (Dungeon.scoreData.minSecrets > Dungeon.secretsFound) { "§e${Dungeon.scoreData.minSecrets}" } else { "§a${Dungeon.scoreData.minSecrets}" }
+            val dDeaths = "§7Deaths: " + if (Dungeon.teamDeaths < 0) { "§c${Dungeon.teamDeaths}" } else { "§a0" }
+            val dScore = "§7Score: " + when {Dungeon.scoreData.score >= 300 -> "§a${Dungeon.scoreData.score}"; Dungeon.scoreData.score >= 270 -> "§e${Dungeon.scoreData.score}"; else -> "§c${Dungeon.scoreData.score}" } + if (Dungeon.hasPaul) " §b★" else ""
+
+            mapLine1 = "$dSecrets    $dCrypts    $dMimic".trim()
+            mapLine2 = "$minSecrets    $dDeaths    $dScore".trim()
         }
     }
 
@@ -63,10 +61,12 @@ object map: Feature("mapEnabled", area = "catacombs") {
         RenderMapBackground(context)
         RenderMapImage(context, true)
 
+        if (mapInfoUnder) RenderInfoUnder(context, true)
+
         matrix.pop()
     }
 
-    fun RenderMap(context: DrawContext, preview: Boolean) {
+    fun RenderMap(context: DrawContext) {
         val matrix = context.matrices
         val x = HUDManager.getX(name)
         val y = HUDManager.getY(name)
@@ -77,10 +77,15 @@ object map: Feature("mapEnabled", area = "catacombs") {
         matrix.scale(scale, scale, 1f)
 
         RenderMapBackground(context)
-        RenderMapImage(context, false)
-        RenderCheckmarks(context)
 
-        RenderPlayers(context)
+        if(!Dungeon.inBoss()) {
+            RenderMapImage(context, false)
+            RenderCheckmarks(context)
+
+            RenderPlayers(context)
+        }
+
+        if (mapInfoUnder) RenderInfoUnder(context, false)
 
         matrix.pop()
     }
@@ -89,7 +94,7 @@ object map: Feature("mapEnabled", area = "catacombs") {
         val matrix = context.matrices
 
         matrix.translate(5f,5f, 0f)
-        if (preview) context.drawGuiTexture({ RenderLayer.getGuiTextured(it) }, prevewMap, 0, 0, 128, 128)
+        if (preview) context.drawGuiTexture(RenderLayer::getGuiTextured, prevewMap, 0, 0, 128, 128)
         else {
             DungeonScanner.discoveredRooms.forEach { room ->
                 if (room.room.explored) {
@@ -152,7 +157,7 @@ object map: Feature("mapEnabled", area = "catacombs") {
             val x = room.x * spacing - w / 2 + roomSize / 2
             val y = room.z * spacing - h / 2 + roomSize / 2
 
-            context.drawGuiTexture({ RenderLayer.getGuiTextured(it) }, questionMark, x, y, w, h)
+            context.drawGuiTexture(RenderLayer::getGuiTextured , questionMark, x, y, w, h)
         }
 
         DungeonScanner.uniqueRooms.forEach { room ->
@@ -183,7 +188,7 @@ object map: Feature("mapEnabled", area = "catacombs") {
             val x = (location.first * spacing).toInt() - w / 2 + roomSize / 2
             val y = (location.second * spacing).toInt() - h / 2 + roomSize / 2
 
-            context.drawGuiTexture({ RenderLayer.getGuiTextured(it) }, checkmark, x, y, w, h)
+            context.drawGuiTexture(RenderLayer::getGuiTextured, checkmark, x, y, w, h)
         }
     }
 
@@ -194,10 +199,6 @@ object map: Feature("mapEnabled", area = "catacombs") {
             val player = DungeonScanner.players.find { it.name == v.name } ?: continue
             val you = Stella.mc.player ?: continue
             if (v.className == "DEAD" && v.name != you.name.string) continue
-
-            val w = 7
-            val h = 10
-            val head = if (v.name == you.name.string) GreenMarker else WhiteMarker
 
             val iconX = player.iconX ?: continue
             val iconY = player.iconZ ?: continue
@@ -211,9 +212,90 @@ object map: Feature("mapEnabled", area = "catacombs") {
             matrix.push()
             matrix.translate(x.toFloat(), y.toFloat(), 0f)
             matrix.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(rotation))
-            context.drawGuiTexture({ RenderLayer.getGuiTextured(it) }, head,  (- w.toDouble() / 2.0).toInt(), (-h.toDouble() / 2.0).toInt(), w, h)
+
+            if (playerIcons) {
+                val w = 12
+                val h = 12
+
+                val borderColor = getClassColor(v.className)
+
+                Render2D.drawRect(context, (-w.toDouble() / 2.0).toInt(), (-h.toDouble() / 2.0).toInt(), w, h, borderColor)
+
+                val scale = 1f - 0.2f
+
+                matrix.scale(scale, scale, 1f)
+
+                val color = -1
+
+                context.drawTexture(
+                    RenderLayer::getGuiTextured,                         // render layer provider
+                    player.skin,
+                    (-w.toDouble() / 2.0).toInt(),
+                    (-h.toDouble() / 2.0).toInt(),
+                    8f,
+                    8f,
+                    w,
+                    h,
+                    8,
+                    8,
+                    64,
+                    64,
+                )
+
+                if (player.hat) {
+                    context.drawTexture(
+                        RenderLayer::getGuiTextured,                         // render layer provider
+                        player.skin,
+                        (-w.toDouble() / 2.0).toInt(),
+                        (-h.toDouble() / 2.0).toInt(),
+                        40f,
+                        8f,
+                        w,
+                        h,
+                        8,
+                        8,
+                        64,
+                        64,
+                    )
+                }
+            } else {
+                val w = 7
+                val h = 10
+                val head = if (v.name == you.name.string) GreenMarker else WhiteMarker
+
+                context.drawGuiTexture(
+                    RenderLayer::getGuiTextured,
+                    head,
+                    (-w.toDouble() / 2.0).toInt(),
+                    (-h.toDouble() / 2.0).toInt(),
+                    w,
+                    h
+                )
+            }
+
             matrix.pop()
         }
+    }
+
+    fun RenderInfoUnder(context: DrawContext, preview: Boolean) {
+        val matrix = context.matrices
+
+        if (preview) {
+            mapLine1 = "&7Secrets: &b?    &7Crypts: &c0    &7Mimic: &c✘";
+            mapLine2 = "&7Min Secrets: &b?    &7Deaths: &a0    &7Score: &c0";
+        }
+
+        val w1 = mapLine1.width()
+        val w2 = mapLine2.width()
+
+        matrix.push()
+        matrix.translate(128f / 2f, 130f, 0f)
+        matrix.scale(0.6f, 0.6f, 1f)
+
+        Render2D.drawString(context, mapLine1, -w1 / 2, 0)
+        Render2D.drawString(context, mapLine2, -w2 / 2, 10)
+
+        matrix.pop()
     }
 
     fun RenderMapBackground(context: DrawContext) {

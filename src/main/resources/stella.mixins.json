@@ -8,6 +8,7 @@
 		"accessors.FrustumInvoker",
 		"accessors.WorldRendererAccessor",
 		"accessors.AccessorMapState",
+		"accessors.AccessorNetHandlerPlayClient",
 		"MixinNetworkManager",
 		"MixinLivingEntity",
 		"MixinGameRenderer"

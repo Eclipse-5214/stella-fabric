@@ -13,6 +13,8 @@ import co.stellarskys.stella.mixin.accessors.AccessorMapState
 import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.Utils.removeFormatting
 import co.stellarskys.stella.utils.skyblock.LocationUtils
+import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner.currentRoom
+import co.stellarskys.stella.utils.stripControlCodes
 import net.minecraft.entity.EquipmentSlot
 import net.minecraft.entity.mob.ZombieEntity
 import net.minecraft.item.FilledMapItem
@@ -76,6 +78,7 @@ object Dungeon {
         "PlayerInfo" to Regex("""^\[(\d+)] (?:\[\w+] )?(\w{1,16})(?: .)? \((\w+)(?: ([IVXLCDM]+))?\)$"""),
         "SecretsFound" to Regex("""^Secrets Found: ([\d,.]+)$"""),
         "SecretsFoundPer" to Regex("""^Secrets Found: ([\d,.]+)%$"""),
+        "RoomSecrets" to Regex("""\b([0-9]|10)/([0-9]|10)\s+Secrets\b"""),
         // More resilient to control chars, captures rank icon or grade
         "Milestone" to Regex("""^Your Milestone: .(.)$"""),
         "CompletedRooms" to Regex("""^Completed Rooms: (\d+)$"""),
@@ -147,7 +150,7 @@ object Dungeon {
     var mimicDead: Boolean = false
     var has270Triggered: Boolean = false
     var has300Triggered: Boolean = false
-    private var hasPaul = false
+    var hasPaul = false
 
     // Mimic
     val MimicTrigger: EventBus.EventCall = EventBus.register<EntityEvent.Death>({ event ->
@@ -297,6 +300,22 @@ object Dungeon {
             if (match == null) return@register
             if (mimicMessages.none { it == match.groupValues[1].lowercase() }) return@register
             mimicDead = true
+        })
+
+        EventBus.register<ChatEvent.Receive>({ event ->
+            val room = DungeonScanner.currentRoom ?: return@register
+
+            if (!event.overlay) return@register
+
+            val match = regexes["RoomSecrets"]!!.find(event.message.string.stripControlCodes())
+            if (match == null) return@register
+
+            val (found, total) = match.destructured
+
+            val secrets = found.toInt()
+
+            if (secrets == room.secretsFound) return@register
+            room.secretsFound = secrets
         })
 
         EventBus.register<AreaEvent.Main> ({

@@ -1,8 +1,8 @@
 package co.stellarskys.stella.utils
 
-import co.stellarskys.novaconfig.core.Config
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.hud.HUDEditor
+import co.stellarskys.stella.utils.config.core.Config
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
@@ -32,6 +32,12 @@ val config = Config("Stella", "stella") {
             configName = "mapEnabled"
             name = "Enable Map"
             description = "Enables the dungeon map"
+        }
+
+        toggle {
+            configName = "seperateMapInfo"
+            name = "Seprate Map Info"
+            description = "renders the map info seperate from the dungeon map"
         }
     }
 

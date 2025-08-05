@@ -62,13 +62,13 @@ val roomTypes = mapOf(
     62 to "Trap"
 )
 
-fun getClassColor(dClass: String?): List<Int> = when (dClass) {
-    "Healer" -> listOf(240, 70, 240, 255)
-    "Mage" -> listOf(70, 210, 210, 255)
-    "Berserk" -> listOf(255, 0, 0, 255)
-    "Archer" -> listOf(30, 170, 50, 255)
-    "Tank" -> listOf(150, 150, 150, 255)
-    else -> listOf(0, 0, 0, 255)
+fun getClassColor(dClass: String?): Color = when (dClass) {
+    "Healer" -> Color(240, 70, 240, 255)
+    "Mage" -> Color(70, 210, 210, 255)
+    "Berserk" -> Color(255, 0, 0, 255)
+    "Archer" -> Color(30, 170, 50, 255)
+    "Tank" -> Color(150, 150, 150, 255)
+    else -> Color(0, 0, 0, 255)
 }
 
 fun typeToName(type: Int): String? = when (type) {
