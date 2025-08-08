@@ -13,6 +13,7 @@ object Palette {
     var Flamingo  = Color.decode("#eebebe")
     var Pink      = Color.decode("#f4b8e4")
     var Mauve     = Color.decode("#ca9ee6")
+    var Purple    = Color.decode("#865dd4")
     var Red       = Color.decode("#e78284")
     var Maroon    = Color.decode("#ea999c")
     var Peach     = Color.decode("#ef9f76")

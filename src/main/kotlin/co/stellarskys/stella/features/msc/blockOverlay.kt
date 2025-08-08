@@ -1,11 +1,11 @@
 package co.stellarskys.stella.features.msc
 
-import co.stellarskys.novaconfig.RGBA
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.Stella.Companion.mc
 import co.stellarskys.stella.events.RenderEvent.BlockOutline
 import co.stellarskys.stella.features.Feature
 import co.stellarskys.stella.utils.config
+import co.stellarskys.stella.utils.config.RGBA
 import co.stellarskys.stella.utils.render.StellaRenderLayers
 import net.minecraft.block.ShapeContext
 import net.minecraft.client.render.*

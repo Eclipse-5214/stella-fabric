@@ -25,8 +25,6 @@ repositories {
 		name = "essentialMavenPublic"
 		url = uri("https://repo.essential.gg/public")
 	}
-	mavenCentral()
-	maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
@@ -42,9 +40,6 @@ dependencies {
 	// Thing
 	modImplementation "org.reflections:reflections:0.10.2"
 	include "org.reflections:reflections:0.10.2"
-
-	// Nova Config
-	modImplementation "com.github.Eclipse-5214:nova-config:$nova_version"
 
 	// Elementa
 	modImplementation "gg.essential:elementa:$elementa_version"

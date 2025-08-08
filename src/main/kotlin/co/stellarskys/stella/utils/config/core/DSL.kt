@@ -3,9 +3,17 @@ package co.stellarskys.stella.utils.config.core
 import co.stellarskys.stella.utils.config.RGBA
 
 open class ConfigCategory(val name: String) {
-    val elements = mutableMapOf<String, ConfigElement>()
+    val subcategories = mutableMapOf<String, ConfigSubcategory>()
     var isMarkdown = false
     var markdown = ""
+
+    fun subcategory(name: String, builder: ConfigSubcategory.() -> Unit) {
+        subcategories[name] = ConfigSubcategory(name).apply(builder)
+    }
+}
+
+open class ConfigSubcategory(val subName: String) {
+    val elements = mutableMapOf<String, ConfigElement>()
 
     /**
      * Adds a [Button] element to the config category.
@@ -68,19 +76,6 @@ open class ConfigCategory(val name: String) {
     }
 
     /**
-     * Adds a semantic [Subcategory] to the config category.
-     *
-     * @param configName The name (and key) of the subcategory element.
-     */
-    fun subcategory(configName: String) {
-        val sub = Subcategory().apply {
-            this.configName = configName
-            this.name = configName.replaceFirstChar { it.uppercase() }
-        }
-        elements[configName] = sub
-    }
-
-    /**
      * Adds a [TextInput] element to the config category.
      *
      * @param builder Lambda used to configure the TextInput.
@@ -128,6 +123,7 @@ open class ConfigCategory(val name: String) {
         this.onValueChanged = cb
     }
 }
+
 
 /**
  * A special category type that displays static markdown content.

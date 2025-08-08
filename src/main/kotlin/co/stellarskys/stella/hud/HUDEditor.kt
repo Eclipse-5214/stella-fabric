@@ -8,7 +8,6 @@ import gg.essential.elementa.constraints.CenterConstraint
 import gg.essential.elementa.dsl.childOf
 import gg.essential.elementa.dsl.pixels
 import gg.essential.universal.UMatrixStack
-import co.stellarskys.novaconfig.ui.NovaPalette
 import co.stellarskys.stella.hud.HUDManager.setPosition
 import co.stellarskys.stella.utils.Utils
 import net.minecraft.client.gui.DrawContext

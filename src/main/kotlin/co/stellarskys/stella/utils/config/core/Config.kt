@@ -1,22 +1,36 @@
 package co.stellarskys.stella.utils.config.core
 
+import co.stellarskys.stella.Stella
 import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.config.RGBA
 import co.stellarskys.stella.utils.config.ui.Palette
 import co.stellarskys.stella.utils.config.ui.Palette.withAlpha
+import co.stellarskys.stella.utils.Utils.createBlock
+import co.stellarskys.stella.utils.config.UCRenderPipelines
+import co.stellarskys.stella.utils.config.drawTexture
+import co.stellarskys.stella.utils.config.ui.elements.ToggleUIBuilder
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.WindowScreen
 import gg.essential.elementa.components.*
 import gg.essential.elementa.constraints.*
+import gg.essential.elementa.constraints.animation.Animations
 import gg.essential.elementa.dsl.*
+import gg.essential.elementa.effects.Effect
+import gg.essential.elementa.effects.OutlineEffect
 import gg.essential.elementa.markdown.MarkdownComponent
+import gg.essential.universal.UMatrixStack
 import net.minecraft.client.MinecraftClient
 import kotlinx.serialization.json.*
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
+import net.minecraft.client.gui.DrawContext
+import net.minecraft.client.util.DefaultSkinHelper
+import net.minecraft.entity.player.PlayerModelPart
 import java.awt.Color
 import java.io.File
+import kotlin.io.path.Path
 
+//TODO Use gradient for the Slider
 
 //Main config Shananagens
 class Config(
@@ -64,16 +78,78 @@ class Config(
     // UI builders
     private fun buildUI(initial: Boolean){
         configUI = object: WindowScreen(ElementaVersion.V2) {
+            val head = UIBlock(Color(0,0,0,0))
+
             init {
+                val list = createBlock(5f)
+                    .constrain {
+                        width = 500.pixels()
+                        height = 250.pixels()
+                        x = CenterConstraint()
+                        y = CenterConstraint()
+                    }
+                    .setColor(Color.BLACK)
+                    .setChildOf(window)
+                    .effect(OutlineEffect(Palette.Purple.withAlpha(100), 1f))
+
+                val card = createBlock(5f)
+                    .constrain {
+                        width = 400.pixels()
+                        height = 250.pixels()
+                        x = CenterConstraint() + 50.pixels() // Offset to the right of list panel
+                        y = CenterConstraint()
+                    }
+                    .setColor(Color.black)
+                    .setChildOf(window)
+
+                val title = UIText(fileName, false)
+                    .constrain {
+                        x = CenterConstraint() - 237.pixels()
+                        y = CenterConstraint() - 160.pixels()
+                    }
+                    .setTextScale(1.5f.pixels())
+                    .setChildOf(window)
+
+                head
+                    .constrain {
+                    x = CenterConstraint() - 235.pixels()
+                    y = CenterConstraint() - 110.pixels()
+                    width = PixelConstraint(12f)
+                    height = PixelConstraint(12f)
+                }.setChildOf(window)
+
+                val username = UIText(Stella.mc.player?.name?.string ?: "null", false)
+                    .constrain {
+                        x = RelativeConstraint() + 17.pixels()
+                        y = CenterConstraint() + 2.pixels()
+                    }
+                    .setColor(Color.white)
+                    .setChildOf(head)
+
+                val tag = UIText("Stella User", false)
+                    .constrain {
+                        x = RelativeConstraint() + 17.pixels()
+                        y = CenterConstraint() + 12.pixels()
+                    }
+                    .setColor(Color.gray)
+                    .setChildOf(head)
+
+
+                // === Category Button Panel ===
+
+                val categoryLabels = mutableMapOf<ConfigCategory, Pair<UIComponent, UIComponent>>()
+
+
                 categories.entries.forEachIndexed { index, category ->
-                    val container = UIBlock()
+                    // Actual button surface
+                    val button = createBlock(3f)
                         .constrain {
-                            width = 100.pixels()
+                            width = 80.pixels()
                             height = 20.pixels()
-                            x = categoryX.pixels()
-                            y = 10.pixels()
+                            x = CenterConstraint() - 200.pixels()
+                            y = CenterConstraint() + (index * 30).pixels()
                         }
-                        .setColor(Palette.Mauve)
+                        .setColor(if (selectedCategory == category.value) Palette.Purple.withAlpha(50) else Color(0,0, 0,0))
                         .setChildOf(window)
 
                     // Category label text
@@ -81,17 +157,76 @@ class Config(
                         .constrain {
                             x = CenterConstraint()
                             y = CenterConstraint()
-                            width = 96.pixels()
+                            width = 76.pixels()
                         }
-                        .setColor(Color.WHITE)
-                        .setChildOf(container)
+                        .setColor(if (selectedCategory == category.value) Palette.Purple else Color.WHITE)
+                        .setChildOf(button)
+
+                    categoryLabels[category.value] = Pair(button, label)
 
                     // Click handler to change category view
+                    button.onMouseClick {
+                        if (selectedCategory != category) {
+                            selectedCategory = category.value
 
+                            // Update label highlight colors
+                            categoryLabels.forEach { (cat, button) ->
+                                val btn = button.first
+                                val lbl = button.second
+
+                                lbl.animate{
+                                    setColorAnimation(
+                                        Animations.OUT_CUBIC,
+                                        0.3f,
+                                        if (cat == selectedCategory) Palette.Purple.toConstraint() else Color.WHITE.toConstraint()
+                                    )
+                                }
+
+                                btn.animate {
+                                    setColorAnimation(
+                                        Animations.OUT_CUBIC,
+                                        0.3f,
+                                        if (cat == selectedCategory) Palette.Purple.withAlpha(50).toConstraint()
+                                        else Color(0,0, 0,0).toConstraint()
+                                    )
+                                }
+                            }
+
+                            // Swap out current category panel
+                            card.clearChildren()
+
+                            if (category.value.isMarkdown) buildMarkown(card, category.value)
+                            else buildCategory(card, category.value)
+                        }
+                    }
+                }
+
+                if(initial) {
+                    if (selectedCategory!!.isMarkdown) buildMarkown(card, selectedCategory!!)
+                    else buildCategory(card, selectedCategory!!)
                 }
             }
 
             override fun shouldPause(): Boolean = false
+
+            override fun onDrawScreen(matrixStack: UMatrixStack, mouseX: Int, mouseY: Int, partialTicks: Float) {
+                super.onDrawScreen(matrixStack, mouseX, mouseY, partialTicks)
+
+                val player = Stella.mc.player ?: return
+                val entry = Stella.mc.networkHandler?.getPlayerListEntry(player.uuid)
+                val skin = entry?.skinTextures?.texture ?: DefaultSkinHelper.getTexture()
+                val hasHat = player.isPartVisible(PlayerModelPart.HAT)
+
+                val x = head.getLeft().toDouble()
+                val y = head.getTop().toDouble()
+                val size = 24.0
+
+                drawTexture(matrixStack, UCRenderPipelines.guiTexturePipeline, skin, x, y, size, size, 8.0, 8.0, 8.0, 8.0)
+
+                if (hasHat) {
+                    drawTexture(matrixStack, UCRenderPipelines.guiTexturePipeline, skin, x, y, size, size, 40.0, 8.0, 8.0, 8.0)
+                }
+            }
         }
     }
 
@@ -115,46 +250,116 @@ class Config(
             .setChildOf(catagoryContainer)
     }
 
-    private fun buildCategory(root: UIComponent, category: ConfigCategory){
-        val catagoryContainer = ScrollComponent()
+    private fun buildCategory(root: UIComponent, category: ConfigCategory) {
+        val categoryContainer = ScrollComponent()
             .constrain {
-                width = 450.pixels()
-                height = 325.pixels()
+                width = 400.pixels()
+                height = 250.pixels()
                 x = CenterConstraint()
                 y = CenterConstraint()
             }
             .setChildOf(root)
 
-        category.elements.entries.forEachIndexed { index, (key, element) ->
-            val component = when (element) {
-                /*
-                is Button -> ButtonUIBuilder().build(catagoryContainer, element)
-                is ColorPicker -> ColorPickerUIBuilder().build(catagoryContainer, element)
-                is Dropdown -> DropdownUIBuilder().build(catagoryContainer, element)
-                is Keybind -> KeybindUIBuilder().build(catagoryContainer, element)
-                is Slider -> SliderUIBuilder().build(catagoryContainer, element)
-                is StepSlider -> StepSliderUIBuilder().build(catagoryContainer, element)
-                is Subcategory -> SubcategoryUIBuilder().build(catagoryContainer, element)
-                is TextInput -> TextInputUIBuilder().build(catagoryContainer, element)
-                is TextParagraph -> TextParagraphUIBuilder().build(catagoryContainer, element)
-                is Toggle -> ToggleUIBuilder().build(catagoryContainer, element, this)
-                 */
+        category.subcategories.entries.forEachIndexed { index, (name, subcategory) ->
+            val column = index % 2
+            val row = index / 2
 
+            buildSubcategory(categoryContainer, subcategory, name, row, column)
+        }
+    }
+
+
+    private fun buildSubcategory(root: UIComponent, subcategory: ConfigSubcategory, title: String, row: Int, column: Int) {
+        val boxHeight = subcategory.elements.values.sumOf { element ->
+            when (element) {
+                is Button -> 20
+                is ColorPicker -> 20
+                is Dropdown -> 20
+                is Keybind -> 20
+                is Slider -> 20
+                is StepSlider -> 20
+                is TextInput -> 20
+                is Toggle -> 20
+                is TextParagraph -> 40 // taller for multiline text
+                else -> 20 // fallback
+            }
+        } + 20 // extra space for title
+
+        val box = createBlock(4f)
+            .constrain {
+                width = 180.pixels()
+                height = boxHeight.pixels()
+                x = CenterConstraint() - 100.pixels() + (200 * column).pixels()
+                y = 10.pixels()
+            }
+            .setChildOf(root)
+            .setColor(Palette.Purple.withAlpha(20))
+            .effect(OutlineEffect(Palette.Purple.withAlpha(100), 1f))
+
+        val titlebox = createBlock(4f)
+            .constrain {
+                width = 180.pixels()
+                height = 20.pixels()
+                x = CenterConstraint()
+                y = 0.pixels()
+            }
+            .setColor(Palette.Purple.withAlpha(100))
+            .setChildOf(box)
+
+        val titleText = UIText(title, false)
+            .constrain {
+                x = 5.pixels()
+                y = CenterConstraint()
+            }
+            .setChildOf(titlebox)
+            .setColor(Color.WHITE)
+
+        var eheight = 20
+
+        subcategory.elements.entries.forEachIndexed { index, (key, element) ->
+            val hmod = when (element) {
+                is Button -> 20
+                is ColorPicker -> 20
+                is Dropdown -> 20
+                is Keybind -> 20
+                is Slider -> 20
+                is StepSlider -> 20
+                is TextInput -> 20
+                is Toggle -> 20
+                is TextParagraph -> 40 // taller for multiline text
+                else -> 20 // fallback
+            }
+
+            val component = when (element) {
+                //is Button -> ButtonUIBuilder().build(box, element)
+                //is ColorPicker -> ColorPickerUIBuilder().build(box, element)
+                //is Dropdown -> DropdownUIBuilder().build(box, element)
+                //is Keybind -> KeybindUIBuilder().build(box, element)
+                //is Slider -> SliderUIBuilder().build(box, element)
+                //is StepSlider -> StepSliderUIBuilder().build(box, element)
+                //is TextInput -> TextInputUIBuilder().build(box, element)
+                //is TextParagraph -> TextParagraphUIBuilder().build(box, element)
+                is Toggle -> ToggleUIBuilder().build(box, element, this)
                 else -> null
             }
 
-            component!!.constrain {
+            if (component == null) return@forEachIndexed
+
+            component.constrain {
                 x = CenterConstraint()
-                y = SiblingConstraint(5f)
+                y = eheight.pixels()
             }
 
             elementContainers[element.configName] = component
             elementRefs[element.configName] = element
-        }
 
-        needsVisibilityUpdate = true
-        scheduleVisibilityUpdate()
+            needsVisibilityUpdate = true
+            scheduleVisibilityUpdate()
+
+            eheight += hmod
+        }
     }
+
 
     // UI functions
     fun open() {
@@ -195,9 +400,15 @@ class Config(
     // Helper functions
     fun flattenValues(): Map<String, Any?> {
         return categories
-            .flatMap { it.value.elements.values }
+            .flatMap { (_, category) ->
+                category.subcategories
+                    .flatMap { (_, subcategory) ->
+                        subcategory.elements.values
+                    }
+            }
             .associate { it.configName to it.value }
     }
+
 
     fun registerListener(callback: (configName: String, value: Any?) -> Unit) {
         listeners += callback
@@ -206,6 +417,7 @@ class Config(
     internal fun notifyListeners(configName: String, newValue: Any?) {
         listeners.forEach { it(configName, newValue) }
         updateConfig()
+        println("visibility update called")
     }
 
     private fun updateConfig() {
@@ -216,32 +428,40 @@ class Config(
     private fun toJson(): JsonObject {
         return buildJsonObject {
             categories.forEach { (_, category) ->
-                val categoryValues = buildJsonObject {
-                    category.elements.forEach { (_, element) ->
-                        val id = element.configName
-                        val value = element.value
+                val subcategoryJson = buildJsonObject {
+                    category.subcategories.forEach { (_, subcategory) ->
+                        val elementJson = buildJsonObject {
+                            subcategory.elements.forEach { (_, element) ->
+                                val id = element.configName
+                                val value = element.value
 
-                        if (id.isNotBlank() && value != null) {
-                            val jsonValue = when (value) {
-                                is Boolean -> JsonPrimitive(value)
-                                is Int -> JsonPrimitive(value)
-                                is Float -> JsonPrimitive(value)
-                                is Double -> JsonPrimitive(value)
-                                is String -> JsonPrimitive(value)
-                                is RGBA -> JsonPrimitive(value.toHex())
-                                else -> {
-                                    println("Unsupported type for $id: ${value::class.simpleName}")
-                                    return@forEach
+                                if (id.isNotBlank() && value != null) {
+                                    val jsonValue = when (value) {
+                                        is Boolean -> JsonPrimitive(value)
+                                        is Int -> JsonPrimitive(value)
+                                        is Float -> JsonPrimitive(value)
+                                        is Double -> JsonPrimitive(value)
+                                        is String -> JsonPrimitive(value)
+                                        is RGBA -> JsonPrimitive(value.toHex())
+                                        else -> {
+                                            println("Unsupported type for $id: ${value::class.simpleName}")
+                                            return@forEach
+                                        }
+                                    }
+
+                                    put(id, jsonValue)
                                 }
                             }
+                        }
 
-                            put(id, jsonValue)
+                        if (elementJson.isNotEmpty()) {
+                            put(subcategory.subName, elementJson)
                         }
                     }
                 }
 
-                if (categoryValues.isNotEmpty()) {
-                    put(category.name, categoryValues)
+                if (subcategoryJson.isNotEmpty()) {
+                    put(category.name, subcategoryJson)
                 }
             }
         }
@@ -251,27 +471,32 @@ class Config(
         categories.forEach { (_, category) ->
             val categoryData = json[category.name]?.jsonObject ?: return@forEach
 
-            category.elements.forEach { (_, element) ->
-                val id = element.configName
-                val jsonValue = categoryData[id] ?: return@forEach
+            category.subcategories.forEach { (_, subcategory) ->
+                val subcategoryData = categoryData[subcategory.subName]?.jsonObject ?: return@forEach
 
-                val newValue = when (val current = element.value) {
-                    is Boolean -> jsonValue.jsonPrimitive.booleanOrNull
-                    is Int -> jsonValue.jsonPrimitive.intOrNull
-                    is Float -> jsonValue.jsonPrimitive.floatOrNull
-                    is Double -> jsonValue.jsonPrimitive.doubleOrNull
-                    is String -> jsonValue.jsonPrimitive.contentOrNull
-                    is RGBA -> jsonValue.jsonPrimitive.contentOrNull?.let { RGBA.fromHex(it) }
-                    else -> {
-                        println("Skipping unsupported load type for '$id': ${current?.let { it::class.simpleName } ?: "null"}")
-                        null
+                subcategory.elements.forEach { (_, element) ->
+                    val id = element.configName
+                    val jsonValue = subcategoryData[id] ?: return@forEach
+
+                    val newValue = when (val current = element.value) {
+                        is Boolean -> jsonValue.jsonPrimitive.booleanOrNull
+                        is Int -> jsonValue.jsonPrimitive.intOrNull
+                        is Float -> jsonValue.jsonPrimitive.floatOrNull
+                        is Double -> jsonValue.jsonPrimitive.doubleOrNull
+                        is String -> jsonValue.jsonPrimitive.contentOrNull
+                        is RGBA -> jsonValue.jsonPrimitive.contentOrNull?.let { RGBA.fromHex(it) }
+                        else -> {
+                            println("Skipping unsupported load type for '$id': ${current?.let { it::class.simpleName } ?: "null"}")
+                            null
+                        }
                     }
-                }
 
-                if (newValue != null) element.value = newValue
+                    if (newValue != null) element.value = newValue
+                }
             }
         }
     }
+
 
     fun save(){
         try {

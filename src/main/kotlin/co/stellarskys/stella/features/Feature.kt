@@ -1,6 +1,5 @@
 package co.stellarskys.stella.features
 
-import co.stellarskys.novaconfig.utils.chatutils
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.*
 import co.stellarskys.stella.utils.ChatUtils
