@@ -98,7 +98,7 @@ abstract class TablistEvent {
     class Update(val packet: PlayerListS2CPacket) : Event()
 
     // Stella exclusive events
-    class UpdatePlayer(val formatted: String, val unformatted: String) : Event()
+    class UpdatePlayer(val formatted: String, val unformatted: String, val idx: Int) : Event()
 }
 
 abstract class AreaEvent {

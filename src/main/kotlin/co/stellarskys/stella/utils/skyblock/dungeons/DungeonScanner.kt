@@ -64,7 +64,7 @@ object DungeonScanner {
     val doors = Array<Door?>(60) { null }
     val uniqueRooms = mutableSetOf<Room>()
     val uniqueDoors = mutableSetOf<Door>()
-    val discoveredRooms = mutableSetOf<DiscoveredRoom>()
+    val discoveredRooms = mutableMapOf<String, DiscoveredRoom>()
     val players = mutableListOf<DungeonPlayer>()
 
     var currentRoom: Room? = null
@@ -79,46 +79,45 @@ object DungeonScanner {
         val player = Stella.mc.player ?: return@register
         if (LocationUtils.area != "catacombs") return@register
 
+        // checking player states
+        checkPlayerState()
+
+
         val (x, z) = realCoordToComponent(player.x.toInt(), player.z.toInt())
         val idx = 6 * z + x
 
-        // Scan dungeon
-        scan()
+        // Bounds check
+        if (idx < 35) {
+            // Scan dungeon
+            scan()
 
-        // Rotation + door + player state updates
-        checkRoomState()
-        checkDoorState()
-        checkPlayerState(EventBus.totalTicks)
+            // Rotation & door state updates
+            checkRoomState()
+            checkDoorState()
 
-        // Bounds check: unregister if beyond 36-room limit
-        if (idx > 35) {
-            tickRegister.unregister()
-            return@register
-        }
+            val prevRoom = lastIdx?.let { rooms[it] }
+            val currRoom = rooms.getOrNull(idx)
 
-        val prevRoom = lastIdx?.let { rooms[it] }
-        val currRoom = rooms.getOrNull(idx)
-
-        /*
+            /*
         if (lastIdx != null && lastIdx != idx && prevRoom?.name != currRoom?.name) {
             _roomLeaveListener.forEach { it(currRoom, prevRoom) }
         }
          */
 
-        if (lastIdx == idx) return@register
+            if (lastIdx == idx) return@register
 
 
-        if (prevRoom?.name != currRoom?.name) {
-           // _roomEnterListener.forEach { it(currRoom) }
-           println("Entered Room! ${currentRoom?.name}")
+            if (prevRoom?.name != currRoom?.name) {
+                // _roomEnterListener.forEach { it(currRoom) }
+                println("Entered Room! ${currentRoom?.name}")
+            }
+
+            lastIdx = idx
+            currentRoom = getRoomAt(player.x.toInt(), player.z.toInt())
+            currentRoom?.explored = true
+
+            currentDoor = getDoorAt(player.x.toInt(), player.z.toInt())
         }
-
-        lastIdx = idx
-        currentRoom = getRoomAt(player.x.toInt(), player.z.toInt())
-        currentRoom?.explored = true
-
-        currentDoor = getDoorAt(player.x.toInt(), player.z.toInt())
-
     },false)
 
     data class RoomClearInfo(
@@ -159,22 +158,21 @@ object DungeonScanner {
     }
 
     fun onPlayerMove(entity: DungeonPlayer?, x: Double, z: Double, yaw: Float) {
-        if (
-            entity == null ||
-            x !in -200.0..-10.0 ||
-            z !in -200.0..-10.0
-        ) return
+        if (entity == null) return
 
         entity.inRender = true
-        entity.iconX = clampMap(x, -200.0, -10.0, 0.0, defaultMapSize.first.toDouble())
-        entity.iconZ = clampMap(z, -200.0, -10.0, 0.0, defaultMapSize.second.toDouble())
+
+        if ( x in -200.0..-10.0 || z in -200.0..-10.0){
+            entity.iconX = clampMap(x, -200.0, -10.0, 0.0, defaultMapSize.first.toDouble())
+            entity.iconZ = clampMap(z, -200.0, -10.0, 0.0, defaultMapSize.second.toDouble())
+
+            val currRoom = getRoomAt(x.toInt(), z.toInt())
+            entity.currentRoom = currRoom
+        }
 
         entity.realX = x
         entity.realZ = z
         entity.rotation = yaw + 180f
-
-        val currRoom = getRoomAt(x.toInt(), z.toInt())
-        entity.currentRoom = currRoom
     }
 
 
@@ -367,7 +365,7 @@ object DungeonScanner {
         }
     }
 
-    fun checkPlayerState(ticks: Int) {
+    fun checkPlayerState() {
         val world = Stella.mc.world ?: return
 
         // Sync missing players before comparison
@@ -476,7 +474,7 @@ object DungeonScanner {
                     if (center == 119.toByte() || rcolor == 85.toByte()) {
                         room.explored = false
                         room.checkmark = Checkmark.UNEXPLORED
-                        discoveredRooms += DiscoveredRoom(x = rmx, z = rmz, room = room)
+                        discoveredRooms["$cx/$cz"] = DiscoveredRoom(x = rmx, z = rmz, room = room)
                         continue
                     }
 
@@ -491,12 +489,17 @@ object DungeonScanner {
                             if (room.checkmark != Checkmark.WHITE) roomCleared(room, Checkmark.WHITE)
                             check = Checkmark.WHITE
                         }
+                        rcolor == 18.toByte() && Dungeon.bloodOpen -> {
+                            if (room.checkmark != Checkmark.WHITE) roomCleared(room, Checkmark.WHITE)
+                            check = Checkmark.WHITE
+                        }
                         center == 18.toByte() && rcolor != 18.toByte() -> check = Checkmark.FAILED
                         room.checkmark == Checkmark.UNEXPLORED -> check = Checkmark.NONE
                     }
 
                     check?.let { room.checkmark = it }
                     room.explored = true
+                    discoveredRooms.remove("$cx/$cz")
                     continue
                 }
 
@@ -521,19 +524,22 @@ object DungeonScanner {
                     val rx = cornerStart.first + halfRoomSize + cx * halfCombinedSize
                     val rz = cornerStart.second + halfRoomSize + cz * halfCombinedSize
 
+                    val type = when (center.toInt()) {
+                        119 -> DoorType.WITHER
+                        18 -> DoorType.BLOOD
+                        else -> DoorType.NORMAL
+                    }
+
                     if (door == null) {
                         val newDoor = Door(rx to rz, comp).apply {
                             rotation = if (cz % 2 == 1) 0 else 1
-                            type = when (center.toInt()) {
-                                119 -> DoorType.WITHER
-                                63 -> DoorType.BLOOD
-                                else -> DoorType.NORMAL
-                            }
+                            setType(type)
                             setState(DoorState.DISCOVERED)
                         }
                         addDoor(newDoor)
                     } else {
                         door.setState(DoorState.DISCOVERED)
+                        door.setType(type)
                     }
                 }
             }

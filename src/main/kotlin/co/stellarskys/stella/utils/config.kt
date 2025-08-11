@@ -43,6 +43,14 @@ val config = Config("Stella", "stella") {
                 description = "renders the map info seperate from the dungeon map"
             }
         }
+
+        subcategory("extra") {
+            toggle {
+                configName = "boxWitherDoors"
+                name = "Box Wither Doors"
+                description = "renders a box around wither doors"
+            }
+        }
     }
 
     category( "Msc."){

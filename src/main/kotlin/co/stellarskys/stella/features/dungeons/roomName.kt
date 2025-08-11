@@ -5,6 +5,7 @@ import co.stellarskys.stella.events.GuiEvent
 import co.stellarskys.stella.features.Feature
 import co.stellarskys.stella.hud.HUDManager
 import co.stellarskys.stella.utils.render.Render2D
+import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.text.Style
@@ -20,6 +21,7 @@ object roomName : Feature("showRoomName", area = "catacombs") {
 
     private fun renderHUD(context: DrawContext) {
         if (!HUDManager.isEnabled("roomname")) return
+        if (Dungeon.inBoss()) return
 
         val text = "§z${DungeonScanner.currentRoom?.name ?: "No Room Found"}"
         val x = HUDManager.getX("roomname") + 5f

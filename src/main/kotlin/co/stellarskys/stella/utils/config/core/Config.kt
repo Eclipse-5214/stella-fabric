@@ -81,6 +81,16 @@ class Config(
             val head = UIBlock(Color(0,0,0,0))
 
             init {
+                val listBG = createBlock(5f)
+                    .constrain {
+                        width = 502.pixels()
+                        height = 252.pixels()
+                        x = CenterConstraint()
+                        y = CenterConstraint()
+                    }
+                    .setColor(Palette.Purple.withAlpha(100))
+                    .setChildOf(window)
+
                 val list = createBlock(5f)
                     .constrain {
                         width = 500.pixels()
@@ -90,7 +100,6 @@ class Config(
                     }
                     .setColor(Color.BLACK)
                     .setChildOf(window)
-                    .effect(OutlineEffect(Palette.Purple.withAlpha(100), 1f))
 
                 val card = createBlock(5f)
                     .constrain {
@@ -285,7 +294,7 @@ class Config(
             }
         } + 20 // extra space for title
 
-        val box = createBlock(4f)
+        val box = UIBlock()
             .constrain {
                 width = 180.pixels()
                 height = boxHeight.pixels()
@@ -296,7 +305,7 @@ class Config(
             .setColor(Palette.Purple.withAlpha(20))
             .effect(OutlineEffect(Palette.Purple.withAlpha(100), 1f))
 
-        val titlebox = createBlock(4f)
+        val titlebox = UIBlock()
             .constrain {
                 width = 180.pixels()
                 height = 20.pixels()

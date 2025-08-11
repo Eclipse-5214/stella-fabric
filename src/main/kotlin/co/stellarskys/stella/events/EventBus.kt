@@ -1,5 +1,7 @@
 package co.stellarskys.stella.events
 
+import co.stellarskys.stella.Stella
+import co.stellarskys.stella.mixin.accessors.AccessorNetHandlerPlayClient
 import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.stripControlCodes
 import kotlinx.atomicfu.traceFormatDefault
@@ -29,6 +31,8 @@ import kotlin.jvm.optionals.getOrNull
 object EventBus {
     val listeners = ConcurrentHashMap<Class<*>, MutableSet<Any>>()
     var totalTicks = 0
+
+    private val playerEntryNames = mapOf("!A-b" to 1, "!A-f" to 5,"!A-j" to 9,"!A-n" to 13,"!A-r" to 17)
 
     init {
         ClientTickEvents.END_CLIENT_TICK.register { client ->
@@ -160,23 +164,33 @@ object EventBus {
                 when (packet.actions.firstOrNull()) {
                     PlayerListS2CPacket.Action.ADD_PLAYER, PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME -> {
                         post(TablistEvent.Update(packet))
-
-                        // Stella Exclusive
-                        val action =  packet.actions.firstOrNull()
-                        if (action != PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME) return
-                        val tlplayers = packet.entries
-
-                        tlplayers.forEach { addplayerdata ->
-                            val name = addplayerdata.displayName
-
-                            if (name == null) return
-                            val formatted = name.string
-                            val unformatted = formatted.stripControlCodes()
-
-                            post(TablistEvent.UpdatePlayer(formatted, unformatted))
-                        }
                     }
                     else -> {}
+                }
+
+                // Stella Exclusive
+                val action = packet.actions
+                val entries = packet.entries
+
+                if (PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME !in action && PlayerListS2CPacket.Action.UPDATE_LISTED !in action) return
+
+                for (entry in entries){
+                    val name = entry.displayName
+                    val profile = entry.profile
+
+                    if (name == null && profile == null){
+                        //println("[EB] entry has no name or profile: $entry")
+                        continue
+                    }
+
+
+                    val formatted = name!!.string
+                    val unformatted = formatted.stripControlCodes()
+
+                    val old = (Stella.mc.networkHandler!! as AccessorNetHandlerPlayClient).uuidToPlayerInfo[entry.profileId]
+                    val idx = playerEntryNames[old?.profile?.name ?: entry.profile?.name] ?: -1
+
+                    post(TablistEvent.UpdatePlayer(formatted, unformatted, idx))
                 }
             }
             is GameMessageS2CPacket -> {

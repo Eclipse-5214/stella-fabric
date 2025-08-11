@@ -124,18 +124,21 @@ object Render3D {
         x: Double,
         y: Double,
         z: Double,
+        length: Double,
         width: Double,
         height: Double,
         color: Color = Color.CYAN,
-        phase: Boolean = false
+        phase: Boolean = false,
+        lineWidth: Double = 1.0
     ) {
         val consumers = ctx.consumers() ?: return
         val matrices = ctx.matrixStack() ?: return
         val cam = camera.pos.negate()
-        val layer = if (phase) StellaRenderLayers.getLinesThroughWalls( 1.0) else StellaRenderLayers.getLines( 1.0)
+        val layer = if (phase) StellaRenderLayers.getLinesThroughWalls(lineWidth) else StellaRenderLayers.getLines(lineWidth)
         val cx = x + 0.5
         val cz = z + 0.5
         val halfWidth = width / 2
+        val halfLength = length / 2
 
         matrices.push()
         matrices.translate(cam.x, cam.y, cam.z)
@@ -143,8 +146,8 @@ object Render3D {
         VertexRendering.drawBox(
             matrices,
             consumers.getBuffer(layer),
-            cx - halfWidth, y, cz - halfWidth,
-            cx + halfWidth, y + height, cz + halfWidth,
+            cx - halfWidth, y, cz - halfLength,
+            cx + halfWidth , y + height, cz + halfLength,
             color.red / 255f, color.green / 255f, color.blue / 255f, color.alpha / 255f
         )
 
@@ -201,7 +204,7 @@ object Render3D {
         val dz = z - pos.z
 
         renderFilledBox(ctx, x, y, z, 1.0, 1.0, Color(color.red, color.green, color.blue, 80), phase)
-        renderBox(ctx, x, y, z, 1.0, 1.0, color, phase)
+        renderBox(ctx, x, y, z, 1.0, 1.0 ,1.0, color, phase)
         renderBeam(ctx, x, y, z, color, phase)
         renderString(
             title ?: "%.2fm".format(sqrt(dx * dx + dy * dy + dz * dz)),

@@ -2,8 +2,14 @@ package co.stellarskys.stella.features.stellanav.utils
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.utils.skyblock.dungeons.Checkmark
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import net.minecraft.resource.ResourceManager
 import net.minecraft.util.Identifier
+import net.minecraft.util.math.Vec3d
 import java.awt.Color
+import java.io.File
+import java.io.InputStreamReader
 
 fun oscale(floor: Int?): Float {
     if (floor == null) return 1f
@@ -45,12 +51,12 @@ val mapRGBs = mapOf(
     119 to Color(0f, 0f, 0f, 1f)
 )
 
-fun getTextColor(check: Int?): String = when (check) {
-    null -> "&7"
-    1 -> "&f"
-    2 -> "&a"
-    3 -> "&c"
-    else -> "&7"
+fun getTextColor(check: Checkmark?): String = when (check) {
+    null -> "§7"
+    Checkmark.WHITE -> "§f"
+    Checkmark.GREEN -> "§a"
+    Checkmark.FAILED -> "§c"
+    else -> "§7"
 }
 
 val roomTypes = mapOf(
@@ -95,4 +101,47 @@ fun typeToColor(type: Int): String? = when (type) {
     else -> null
 }
 
+data class BossMapData(
+    val image: String,
+    val bounds: List<List<Double>>,
+    val widthInWorld: Int,
+    val heightInWorld: Int,
+    val topLeftLocation: List<Int>,
+    val renderSize: Int? = null
+)
 
+object BossMapRegistry {
+    private val gson = Gson()
+    private val bossMaps = mutableMapOf<String, List<BossMapData>>()
+
+    init {
+        val resourceManager = Stella.mc.resourceManager
+        load(resourceManager)
+    }
+
+    fun load(resourceManager: ResourceManager) {
+        val id = Identifier.of(Stella.NAMESPACE, "dungeons/imagedata.json")
+        val optional = resourceManager.getResource(id)
+        val resource = optional.orElse(null) ?: return
+
+        val reader = InputStreamReader(resource.inputStream)
+        val type = object : TypeToken<Map<String, List<BossMapData>>>() {}.type
+        val parsed = gson.fromJson<Map<String, List<BossMapData>>>(reader, type)
+
+        bossMaps.putAll(parsed)
+    }
+
+    fun getBossMap(floor: Int, playerPos: Vec3d): BossMapData? {
+        val maps = bossMaps[floor.toString()] ?: return null
+        return maps.firstOrNull { map ->
+            (0..2).all { axis ->
+                val min = map.bounds[0][axis]
+                val max = map.bounds[1][axis]
+                val p = listOf(playerPos.x, playerPos.y, playerPos.z)[axis]
+                p in min..max
+            }
+        }
+    }
+
+    fun getAll(): Map<String, List<BossMapData>> = bossMaps
+}
