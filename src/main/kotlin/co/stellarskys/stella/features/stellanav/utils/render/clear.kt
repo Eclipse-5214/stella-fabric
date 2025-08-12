@@ -87,7 +87,7 @@ object clear{
 
             // Ts is horrible coding but if it works it works
             if (roomCheckmarks == 2 && room.secrets != 0 && room.type in setOf(RoomType.NORMAL, RoomType.RARE)) return@forEach
-            if (roomCheckmarks in setOf(1, 3) && room.type in setOf(RoomType.NORMAL, RoomType.RARE)) return@forEach
+            if (roomCheckmarks > 0 && room.type in setOf(RoomType.NORMAL, RoomType.RARE)) return@forEach
             if ((puzzleCheckmarks > 0 && room.type == RoomType.PUZZLE) || room.type == RoomType.ENTRANCE) return@forEach
 
             val minX = room.components.minOf { it.first }
@@ -213,7 +213,7 @@ object clear{
 
             val final = buildList {
                 if (roomCheckmarks in listOf(1, 3)) addAll(roomText.split(" "))
-                if (roomCheckmarks in listOf(2, 3)) add(secretText)
+                if (roomCheckmarks in listOf(2, 3) && room.secrets != 0) add(secretText)
             }
 
             val minX = room.components.minOf { it.first }

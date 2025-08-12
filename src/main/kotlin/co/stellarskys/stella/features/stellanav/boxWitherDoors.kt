@@ -16,7 +16,7 @@ object boxWitherDoors: Feature("boxWitherDoors", "catacombs") {
     var keyObtained = false
     var bloodOpen = false
 
-    val obtainKey = Regex("""^(\[[^\]]+]) (\w+) has obtained (Wither|Blood) Key!$""")
+    val obtainKey = Regex("""^(?:\[[^]]+]\s)?(\w+) has obtained (Wither|Blood) Key!$""")
     val openedDoor = Regex("""^(\w+) opened a WITHER door!$""")
     val bloodOpened = Regex("""^The BLOOD DOOR has been opened!$""")
 
