@@ -120,7 +120,7 @@ class Room(
     }
 
     fun loadFromMapColor(color: Byte): Room {
-        type = mapColorToRoomType[color.toInt()] ?: RoomType.NORMAL
+        type = mapColorToRoomType[color.toInt()] ?: RoomType.UNKNOWN
         when (type) {
             RoomType.BLOOD -> RoomRegistry.getAll().find { it.name == "Blood" }?.let { loadFromData(it) }
             RoomType.ENTRANCE -> RoomRegistry.getAll().find { it.name == "Entrance" }?.let { loadFromData(it) }

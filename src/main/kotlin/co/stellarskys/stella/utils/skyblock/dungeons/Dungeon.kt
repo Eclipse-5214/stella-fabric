@@ -274,7 +274,6 @@ object Dungeon {
 
                 alives.forEachIndexed { index, player ->
                     player.icon = "icon-$index"
-                    println("[Dungeon] ${player.name} has an index of ${player.tabIndex}")
                 }
 
                 self?.icon = "icon${alives.size}"
@@ -580,7 +579,7 @@ object Dungeon {
                 icons[player.icon] = Icon(
                     x = decoration.mapX,
                     y = decoration.mapZ,
-                    yaw = decoration.yaw,
+                    yaw = decoration.yaw + 180f,
                     player = player.name
                 )
             }

@@ -2,13 +2,14 @@ package co.stellarskys.stella.features.stellanav.utils
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.utils.skyblock.dungeons.Checkmark
+import co.stellarskys.stella.utils.skyblock.dungeons.DoorType
+import co.stellarskys.stella.utils.skyblock.dungeons.RoomType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import net.minecraft.resource.ResourceManager
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.Vec3d
 import java.awt.Color
-import java.io.File
 import java.io.InputStreamReader
 
 fun oscale(floor: Int?): Float {
@@ -38,19 +39,6 @@ fun getCheckmarks(checkmark: Checkmark): Identifier? = when (checkmark) {
     else -> null
 }
 
-
-val mapRGBs = mapOf(
-    18 to Color(1f, 0f, 0f, 1f),
-    85 to Color(65 / 255f, 65 / 255f, 65 / 255f, 1f),
-    30 to Color(20 / 255f, 133 / 255f, 0 / 255f, 1f),
-    63 to Color(107 / 255f, 58 / 255f, 17 / 255f, 1f),
-    82 to Color(224 / 255f, 0f, 255 / 255f, 1f),
-    62 to Color(216 / 255f, 127 / 255f, 51 / 255f, 1f),
-    74 to Color(254 / 255f, 223 / 255f, 0 / 255f, 1f),
-    66 to Color(117 / 255f, 0f, 133 / 255f, 1f),
-    119 to Color(0f, 0f, 0f, 1f)
-)
-
 fun getTextColor(check: Checkmark?): String = when (check) {
     null -> "§7"
     Checkmark.WHITE -> "§f"
@@ -77,29 +65,23 @@ fun getClassColor(dClass: String?): Color = when (dClass) {
     else -> Color(0, 0, 0, 255)
 }
 
-fun typeToName(type: Int): String? = when (type) {
-    0 -> "NORMAL"
-    1 -> "PUZZLE"
-    2 -> "TRAP"
-    3 -> "MINIBOSS"
-    4 -> "BLOOD"
-    5 -> "FAIRY"
-    6 -> "RARE"
-    7 -> "ENTRANCE"
-    else -> null
-}
+val roomTypeColors = mapOf(
+    RoomType.NORMAL to mapConfig.NormalColor,
+    RoomType.PUZZLE to mapConfig.PuzzleColor,
+    RoomType.TRAP to mapConfig.TrapColor,
+    RoomType.YELLOW to mapConfig.MinibossColor,
+    RoomType.BLOOD to mapConfig.BloodColor,
+    RoomType.FAIRY to mapConfig.FaryColor,
+    RoomType.ENTRANCE to mapConfig.EntranceColor,
+)
 
-fun typeToColor(type: Int): String? = when (type) {
-    0 -> "7"
-    1 -> "d"
-    2 -> "6"
-    3 -> "e"
-    4 -> "c"
-    5 -> "d"
-    6 -> "b"
-    7 -> "a"
-    else -> null
-}
+val doorTypeColors = mapOf(
+    DoorType.NORMAL to mapConfig.NormalDoorColor,
+    DoorType.WITHER to mapConfig.WitherDoorColor,
+    DoorType.BLOOD to mapConfig.BloodDoorColor,
+    DoorType.ENTRANCE to mapConfig .EnteranceDoorColor
+)
+
 
 data class BossMapData(
     val image: String,

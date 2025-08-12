@@ -136,7 +136,7 @@ object clear{
 
             val final = buildList {
                 if (puzzleCheckmarks in listOf(1, 3)) addAll(roomText.split(" "))
-                if (puzzleCheckmarks in listOf(2, 3)) add(secretText)
+                if (puzzleCheckmarks in listOf(2, 3) && room.secrets != 0) add(secretText)
             }
 
 

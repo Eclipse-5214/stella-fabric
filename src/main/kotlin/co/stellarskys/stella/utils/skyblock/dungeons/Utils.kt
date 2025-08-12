@@ -60,6 +60,13 @@ val directions = listOf(
     listOf(0, -halfCombinedSize, 0, -1)
 )
 
+val mapDirections = listOf(
+    1 to 0,  // East
+    -1 to 0, // West
+    0 to 1,  // South
+    0 to -1  // North
+)
+
 val defaultMapSize = Pair(125, 125)
 
 val blacklist = setOf(5, 54, 146)
@@ -159,25 +166,6 @@ val roomTypeMap = mapOf(
     "fairy" to RoomType.FAIRY,
     "rare" to RoomType.RARE,
     "spawn" to RoomType.ENTRANCE
-)
-
-val roomTypeColors = mapOf(
-    RoomType.NORMAL to Color(107 / 255f, 58 / 255f, 17 / 255f, 1f),     // Brown
-    RoomType.PUZZLE to Color(117 / 255f, 0f, 133 / 255f, 1f),            // Purple
-    RoomType.TRAP to Color(216 / 255f, 127 / 255f, 51 / 255f, 1f),       // Orange
-    RoomType.YELLOW to Color(254 / 255f, 223 / 255f, 0f, 1f),            // Yellow
-    RoomType.BLOOD to Color(1f, 0f, 0f, 1f),                             // Red
-    RoomType.FAIRY to Color(224 / 255f, 0f, 255 / 255f, 1f),             // Pink
-    RoomType.ENTRANCE to Color(20 / 255f, 133 / 255f, 0 / 255f, 1f),     // Green
-    //RoomType.SPAWN to Color(65 / 255f, 65 / 255f, 65 / 255f, 1f),        // Gray
-    //RoomType.UNIDENTIFIED to Color(0f, 0f, 0f, 1f)                       // Black fallback
-)
-
-val doorTypeColors = mapOf(
-    DoorType.NORMAL to Color(80 / 255f, 40 / 255f, 10 / 255f, 1f),     // Distinct Brown
-    DoorType.WITHER to Color(0f, 0f, 0f, 1f),                          // Black
-    DoorType.BLOOD to Color(1f, 0f, 0f, 1f),                          // Red
-    DoorType.ENTRANCE to Color(0f, 0.8f, 0f, 1f)                      // Soft Green
 )
 
 

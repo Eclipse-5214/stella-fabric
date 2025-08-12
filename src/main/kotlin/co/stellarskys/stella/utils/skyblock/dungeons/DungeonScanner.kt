@@ -115,8 +115,8 @@ object DungeonScanner {
             lastIdx = idx
             currentRoom = getRoomAt(player.x.toInt(), player.z.toInt())
             currentRoom?.explored = true
-
-            currentDoor = getDoorAt(player.x.toInt(), player.z.toInt())
+            val (rmx, rmz) = currentRoom?.components?.firstOrNull() ?: return@register
+            discoveredRooms.remove("$rmx/$rmz")
         }
     },false)
 
@@ -355,7 +355,7 @@ object DungeonScanner {
             val clearedMap = v.clearedRooms[colorKey]
 
             clearedMap?.putIfAbsent(
-                room.name!!,
+                room.name ?: "unknown",
                 RoomClearInfo(
                     time = Dungeon.dungeonSeconds,
                     room = room,
@@ -386,7 +386,7 @@ object DungeonScanner {
         for (v in players) {
             val p = world.players.find { it.name.string == v.name }
 
-            val hasHat = p?.isPartVisible(PlayerModelPart.HAT) ?: false
+            val hasHat = p?.isPartVisible(PlayerModelPart.HAT) ?: v.hat
 
             v.hat = hasHat
 
@@ -460,9 +460,60 @@ object DungeonScanner {
                     val rmx = cx / 2
                     val rmz = cz / 2
                     val roomIdx = getRoomIdx(rmx to rmz)
-                    val room = rooms[roomIdx] ?: Room(rmx to rmz).also { rooms[roomIdx] = it }
+                    val room = rooms[roomIdx] ?: Room(rmx to rmz).also {newRoom ->
+                        rooms[roomIdx] = newRoom
+                        uniqueRooms.pushCheck(newRoom)
 
-                    if (room.type == RoomType.NORMAL && room.height == null) {
+                        for ((dx, dz) in mapDirections) {
+                            val doorCx = cx + dx
+                            val doorCz = cz + dz
+
+                            // Only scan odd coordinates (door space)
+                            if (doorCx % 2 == 0 && doorCz % 2 == 0) {
+                                println("Not odd")
+                                continue
+                            }
+
+                            val doorX = x + dx * Dungeon.mapGapSize / 2
+                            val doorZ = z + dz * Dungeon.mapGapSize / 2
+                            val doorIdx = doorX + doorZ * 128
+                            val center = colors.getOrNull(doorIdx)
+
+                            // If there's a pixel, and it's a door, skip merging
+                            val isGap = center == null || center == 0.toByte()
+                            val isDoor = if (!isGap) {
+                                val horiz = listOf(
+                                    colors.getOrNull(doorIdx - 128 - 4) ?: 0,
+                                    colors.getOrNull(doorIdx - 128 + 4) ?: 0
+                                )
+                                val vert = listOf(
+                                    colors.getOrNull(doorIdx - 128 * 5) ?: 0,
+                                    colors.getOrNull(doorIdx + 128 * 3) ?: 0
+                                )
+                                horiz.all { it == 0.toByte() } || vert.all { it == 0.toByte() }
+                            } else false
+
+                            if (isGap || isDoor) continue // skip if there's a gap or a door
+
+                            val neighborCx = cx + dx * 2
+                            val neighborCz = cz + dz * 2
+                            val neighborComp = neighborCx / 2 to neighborCz / 2
+                            val neighborIdx = getRoomIdx(neighborComp)
+                            if (neighborIdx !in rooms.indices) continue
+
+                            val neighborRoom = rooms[neighborIdx]
+                            if (neighborRoom == null) {
+                                newRoom.addComponent(neighborComp)
+                                rooms[neighborIdx] = newRoom
+                                println("Room at $rmx/$rmz is taking over comp at ${neighborComp.first}/${neighborComp.second}")
+                            } else if (neighborRoom != newRoom && neighborRoom.type != RoomType.ENTRANCE) {
+                                mergeRooms(neighborRoom, newRoom)
+                                println("Merged room at $rmx/$rmz with neighbor at ${neighborComp.first}/${neighborComp.second}")
+                            }
+                        }
+                    }
+
+                    if (room.type == RoomType.UNKNOWN && room.height == null) {
                         room.loadFromMapColor(rcolor)
                     }
 
@@ -474,7 +525,7 @@ object DungeonScanner {
                     if (center == 119.toByte() || rcolor == 85.toByte()) {
                         room.explored = false
                         room.checkmark = Checkmark.UNEXPLORED
-                        discoveredRooms["$cx/$cz"] = DiscoveredRoom(x = rmx, z = rmz, room = room)
+                        discoveredRooms["$rmx/$rmz"] = DiscoveredRoom(x = rmx, z = rmz, room = room)
                         continue
                     }
 
@@ -499,7 +550,7 @@ object DungeonScanner {
 
                     check?.let { room.checkmark = it }
                     room.explored = true
-                    discoveredRooms.remove("$cx/$cz")
+                    discoveredRooms.remove("$rmx/$rmz")
                     continue
                 }
 
@@ -565,6 +616,8 @@ object DsDebug : CommandUtils(
             cores.forEach {
                 ChatUtils.addMessage(" - $it")
             }
+
+            ChatUtils.addMessage("${Stella.PREFIX} §b$name §Ftype is §b${room.type}§f, explored? ${room.explored}")
         }
         return 1
     }

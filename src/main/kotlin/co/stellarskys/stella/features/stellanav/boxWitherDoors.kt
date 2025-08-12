@@ -14,6 +14,7 @@ import co.stellarskys.stella.utils.stripControlCodes
 @Stella.Module
 object boxWitherDoors: Feature("boxWitherDoors", "catacombs") {
     var keyObtained = false
+    var bloodOpen = false
 
     val obtainKey = Regex("""^(\[[^\]]+]) (\w+) has obtained (Wither|Blood) Key!$""")
     val openedDoor = Regex("""^(\w+) opened a WITHER door!$""")
@@ -38,13 +39,14 @@ object boxWitherDoors: Feature("boxWitherDoors", "catacombs") {
             val bloodMatch = bloodOpened.find(msg)
             if (bloodMatch != null){
                 keyObtained = false
+                bloodOpen = true
                 return@register
             }
 
         })
 
         register<RenderEvent.World>({ event ->
-            if(event.context == null) return@register
+            if(event.context == null || bloodOpen) return@register
             val color = if (keyObtained) mapConfig.key else mapConfig.noKey
 
             DungeonScanner.doors.forEach { door ->
@@ -72,5 +74,10 @@ object boxWitherDoors: Feature("boxWitherDoors", "catacombs") {
                 }
             }
         })
+    }
+
+    override fun onUnregister() {
+        bloodOpen = false
+        keyObtained = false
     }
 }
