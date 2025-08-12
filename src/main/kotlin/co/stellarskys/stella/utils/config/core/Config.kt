@@ -8,7 +8,7 @@ import co.stellarskys.stella.utils.config.ui.Palette.withAlpha
 import co.stellarskys.stella.utils.Utils.createBlock
 import co.stellarskys.stella.utils.config.UCRenderPipelines
 import co.stellarskys.stella.utils.config.drawTexture
-import co.stellarskys.stella.utils.config.ui.elements.ToggleUIBuilder
+import co.stellarskys.stella.utils.config.ui.elements.*
 import gg.essential.elementa.ElementaVersion
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.WindowScreen
@@ -205,14 +205,14 @@ class Config(
                             card.clearChildren()
 
                             if (category.value.isMarkdown) buildMarkown(card, category.value)
-                            else buildCategory(card, category.value)
+                            else buildCategory(card, window, category.value)
                         }
                     }
                 }
 
                 if(initial) {
                     if (selectedCategory!!.isMarkdown) buildMarkown(card, selectedCategory!!)
-                    else buildCategory(card, selectedCategory!!)
+                    else buildCategory(card, window, selectedCategory!!)
                 }
             }
 
@@ -259,7 +259,7 @@ class Config(
             .setChildOf(catagoryContainer)
     }
 
-    private fun buildCategory(root: UIComponent, category: ConfigCategory) {
+    private fun buildCategory(root: UIComponent, window: Window, category: ConfigCategory) {
         val categoryContainer = ScrollComponent()
             .constrain {
                 width = 400.pixels()
@@ -273,12 +273,12 @@ class Config(
             val column = index % 2
             val row = index / 2
 
-            buildSubcategory(categoryContainer, subcategory, name, row, column)
+            buildSubcategory(categoryContainer, window, subcategory, name, row, column)
         }
     }
 
 
-    private fun buildSubcategory(root: UIComponent, subcategory: ConfigSubcategory, title: String, row: Int, column: Int) {
+    private fun buildSubcategory(root: UIComponent, window: Window, subcategory: ConfigSubcategory, title: String, row: Int, column: Int) {
         val boxHeight = subcategory.elements.values.sumOf { element ->
             when (element) {
                 is Button -> 20
@@ -340,7 +340,7 @@ class Config(
             }
 
             val component = when (element) {
-                //is Button -> ButtonUIBuilder().build(box, element)
+                is Button -> ButtonUIBuilder().build(box, element, window)
                 //is ColorPicker -> ColorPickerUIBuilder().build(box, element)
                 //is Dropdown -> DropdownUIBuilder().build(box, element)
                 //is Keybind -> KeybindUIBuilder().build(box, element)
@@ -348,7 +348,7 @@ class Config(
                 //is StepSlider -> StepSliderUIBuilder().build(box, element)
                 //is TextInput -> TextInputUIBuilder().build(box, element)
                 //is TextParagraph -> TextParagraphUIBuilder().build(box, element)
-                is Toggle -> ToggleUIBuilder().build(box, element, this)
+                is Toggle -> ToggleUIBuilder().build(box, element, this, window)
                 else -> null
             }
 

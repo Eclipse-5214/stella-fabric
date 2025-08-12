@@ -16,6 +16,12 @@ val config = Config("Stella", "stella") {
                 name = "Stella"
                 description = "Made by NEXD_"
             }
+
+            button {
+                configName = "website"
+                name = "Website"
+                description = "A link to stella's website"
+            }
         }
     }
 

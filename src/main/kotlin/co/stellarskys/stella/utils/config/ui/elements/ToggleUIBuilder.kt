@@ -5,6 +5,7 @@ import co.stellarskys.stella.utils.config.core.Toggle
 import co.stellarskys.stella.utils.config.ui.Palette
 import co.stellarskys.stella.utils.Utils.createBlock
 import co.stellarskys.stella.utils.config.ui.Palette.withAlpha
+import co.stellarskys.stella.utils.render.Render2D.width
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.*
 import gg.essential.elementa.constraints.*
@@ -32,7 +33,7 @@ class ToggleUIBuilder {
      * @return A fully constructed UIComponent representing the toggle.
      */
 
-    fun build(root: UIComponent, toggle: Toggle, config: Config): UIComponent {
+    fun build(root: UIComponent, toggle: Toggle, config: Config, window: Window): UIComponent {
         val toggleContainer = UIBlock()
             .constrain {
                 width = 180.pixels()
@@ -49,16 +50,34 @@ class ToggleUIBuilder {
                 y = CenterConstraint()
             }
             .setChildOf(toggleContainer)
-        /*
-        val toggleDesc = UIWrappedText("§7" + toggle.description)
-            .constrain {
-                x = PixelConstraint(7f)
-                y = PixelConstraint(17f)
-                width = 230.pixels()
-            }
-            .setChildOf(toggleContainer)
 
-         */
+        val tooltip = createBlock(3f)
+            .constrain {
+                width = (toggle.description.width() + 10).pixels()
+                height = 20.pixels()
+                x = CenterConstraint()
+                y = CenterConstraint() + 150.pixels()
+            }
+            .setColor(Color.black)
+            .setChildOf(window)
+
+        val tooltipText = UIText(toggle.description)
+            .constrain {
+                x = CenterConstraint()
+                y = CenterConstraint()
+            }
+            .setColor(Color.WHITE)
+            .setChildOf(tooltip)
+
+        tooltip.hide(true)
+
+        toggleName.onMouseEnter {
+            tooltip.unhide(true)
+        }
+
+        toggleName.onMouseLeave {
+            tooltip.hide(true)
+        }
 
         val toggleSwitch = createBlock(5f)
             .constrain {
