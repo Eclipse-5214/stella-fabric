@@ -341,7 +341,7 @@ class Config(
 
             val component = when (element) {
                 is Button -> ButtonUIBuilder().build(box, element, window)
-                //is ColorPicker -> ColorPickerUIBuilder().build(box, element)
+                is ColorPicker -> ColorPickerUIBuilder().build(box, element, window)
                 //is Dropdown -> DropdownUIBuilder().build(box, element)
                 //is Keybind -> KeybindUIBuilder().build(box, element)
                 //is Slider -> SliderUIBuilder().build(box, element)

@@ -6,6 +6,7 @@ import co.stellarskys.stella.utils.config.ui.Palette.withAlpha
 import co.stellarskys.stella.utils.Utils.createBlock
 import co.stellarskys.stella.utils.render.Render2D.width
 import gg.essential.elementa.UIComponent
+import gg.essential.elementa.components.UIBlock
 import gg.essential.elementa.components.UIRoundedRectangle
 import gg.essential.elementa.components.UIText
 import gg.essential.elementa.dsl.*
@@ -17,7 +18,7 @@ import java.awt.Color
 
 class ButtonUIBuilder {
     fun build(root: UIComponent, button: Button, window: Window): UIComponent {
-        val container = UIRoundedRectangle(6f)
+        val container = UIBlock()
             .constrain {
                 width = 180.pixels()
                 height = 20.pixels()
