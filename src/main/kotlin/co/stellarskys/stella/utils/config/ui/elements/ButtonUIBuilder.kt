@@ -4,10 +4,10 @@ import co.stellarskys.stella.utils.config.core.Button
 import co.stellarskys.stella.utils.config.ui.Palette
 import co.stellarskys.stella.utils.config.ui.Palette.withAlpha
 import co.stellarskys.stella.utils.Utils.createBlock
+import co.stellarskys.stella.utils.config.core.attachTooltip
 import co.stellarskys.stella.utils.render.Render2D.width
 import gg.essential.elementa.UIComponent
 import gg.essential.elementa.components.UIBlock
-import gg.essential.elementa.components.UIRoundedRectangle
 import gg.essential.elementa.components.UIText
 import gg.essential.elementa.dsl.*
 import gg.essential.elementa.components.Window
@@ -35,33 +35,7 @@ class ButtonUIBuilder {
             }
             .setChildOf(container)
 
-        val tooltip = createBlock(3f)
-            .constrain {
-                width = (button.description.width() + 10).pixels()
-                height = 20.pixels()
-                x = CenterConstraint()
-                y = CenterConstraint() + 150.pixels()
-            }
-            .setColor(Color.black)
-            .setChildOf(window)
-
-        val tooltipText = UIText(button.description)
-            .constrain {
-                x = CenterConstraint()
-                y = CenterConstraint()
-            }
-            .setColor(Color.WHITE)
-            .setChildOf(tooltip)
-
-        tooltip.hide(true)
-
-        name.onMouseEnter {
-            tooltip.unhide(true)
-        }
-
-        name.onMouseLeave {
-            tooltip.hide(true)
-        }
+        attachTooltip(window,name, button.description)
 
         val buttonInput = createBlock(2f)
             .constrain {

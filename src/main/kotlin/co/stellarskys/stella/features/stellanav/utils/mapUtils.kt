@@ -71,7 +71,7 @@ val roomTypeColors = mapOf(
     RoomType.TRAP to mapConfig.TrapColor,
     RoomType.YELLOW to mapConfig.MinibossColor,
     RoomType.BLOOD to mapConfig.BloodColor,
-    RoomType.FAIRY to mapConfig.FaryColor,
+    RoomType.FAIRY to mapConfig.FairyColor,
     RoomType.ENTRANCE to mapConfig.EntranceColor,
 )
 
@@ -79,7 +79,7 @@ val doorTypeColors = mapOf(
     DoorType.NORMAL to mapConfig.NormalDoorColor,
     DoorType.WITHER to mapConfig.WitherDoorColor,
     DoorType.BLOOD to mapConfig.BloodDoorColor,
-    DoorType.ENTRANCE to mapConfig .EnteranceDoorColor
+    DoorType.ENTRANCE to mapConfig .EntranceDoorColor
 )
 
 

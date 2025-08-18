@@ -1,14 +1,17 @@
 package co.stellarskys.stella.features.stellanav.utils.render
 
+import co.stellarskys.stella.features.stellanav.utils.mapConfig
 import co.stellarskys.stella.features.stellanav.utils.mapConfig.mapInfoUnder
 import co.stellarskys.stella.features.stellanav.utils.oscale
 import co.stellarskys.stella.features.stellanav.utils.prevewMap
+import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.render.Render2D
 import co.stellarskys.stella.utils.render.Render2D.width
 import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.render.RenderLayer
 import java.awt.Color
+import java.awt.image.renderable.RenderContext
 
 object mapRender {
     private val defaultMapSize = Pair(138, 138)
@@ -22,6 +25,7 @@ object mapRender {
         matrix.push()
         matrix.translate(x, y,0f)
         matrix.scale(scale, scale, 1f)
+        matrix.translate(5f,5f,0f)
 
         renderMapBackground(context)
 
@@ -45,6 +49,8 @@ object mapRender {
         }
 
         if (mapInfoUnder) renderInfoUnder(context, false)
+
+        if (mapConfig.mapBorder) renderMapBorder(context)
 
         matrix.pop()
     }
@@ -87,13 +93,30 @@ object mapRender {
         matrix.pop()
     }
 
+
     fun renderMapBackground(context: DrawContext) {
-        val matrix = context.matrices
         val w = defaultMapSize.first
         var h = defaultMapSize.second
         h += if (mapInfoUnder) 10 else 0
 
-        matrix.translate(5f,5f,0f)
-        Render2D.drawRect(context, 0, 0, w, h, Color(0,0,0, 100))
+        Render2D.drawRect(context, 0, 0, w, h, mapConfig.mapBgColor)
+    }
+
+    fun renderMapBorder(context: DrawContext) {
+        val (w, baseH) = defaultMapSize
+        val borderWidth = 3
+        val h = baseH + if (mapInfoUnder) 10 else 0
+        val color = mapConfig.mapBdColor
+        // Top border
+        Render2D.drawRect(context, -borderWidth, -borderWidth, w + borderWidth * 2, borderWidth, color)
+
+        // Bottom border
+        Render2D.drawRect(context, -borderWidth, h, w + borderWidth * 2, borderWidth, color)
+
+        // Left border
+        Render2D.drawRect(context, -borderWidth, 0, borderWidth, h, color)
+
+        // Right border
+        Render2D.drawRect(context, w, 0, borderWidth, h, color)
     }
 }

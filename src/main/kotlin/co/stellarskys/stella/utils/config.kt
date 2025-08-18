@@ -44,10 +44,22 @@ val config = Config("Stella", "stella") {
             }
 
             toggle {
-                configName = "seperateMapInfo"
-                name = "Seprate Map Info"
-                description = "renders the map info seperate from the dungeon map"
+                configName = "bossMapEnabled"
+                name = "Enable Boss Map"
+                description = "Enables the dungeon boss map"
+
+                shouldShow { settings -> settings["mapEnabled"] as Boolean }
             }
+
+            toggle {
+                configName = "scoreMapEnabled"
+                name = "Enable Score Map"
+                description = "Enables the dungeon score map"
+            }
+        }
+
+        subcategory("Map") {
+
         }
 
         subcategory("extra") {
@@ -55,6 +67,12 @@ val config = Config("Stella", "stella") {
                 configName = "boxWitherDoors"
                 name = "Box Wither Doors"
                 description = "renders a box around wither doors"
+            }
+
+            toggle {
+                configName = "seperateMapInfo"
+                name = "Seprate Map Info"
+                description = "renders the map info seperate from the dungeon map"
             }
         }
     }

@@ -1,6 +1,14 @@
 package co.stellarskys.stella.utils.config.core
 
 import co.stellarskys.stella.utils.config.RGBA
+import co.stellarskys.stella.utils.render.Render2D.width
+import co.stellarskys.stella.utils.Utils.createBlock
+import gg.essential.elementa.UIComponent
+import gg.essential.elementa.components.UIText
+import gg.essential.elementa.components.Window
+import gg.essential.elementa.constraints.*
+import gg.essential.elementa.dsl.*
+import java.awt.Color
 
 open class ConfigCategory(val name: String) {
     val subcategories = mutableMapOf<String, ConfigSubcategory>()
@@ -276,3 +284,73 @@ class Toggle : ConfigElement() {
         value = default
     }
 }
+
+object FloatingUIManager {
+    private val floatingComponents = mutableListOf<UIComponent>()
+    private val colorPickers = mutableListOf<UIComponent>()
+    private var activePicker: UIComponent? = null
+
+
+    fun register(component: UIComponent) {
+        floatingComponents += component
+    }
+
+    fun registerColorPicker(picker: UIComponent) {
+        colorPickers += picker
+        register(picker)
+    }
+
+    fun setActivePicker(active: UIComponent) {
+        colorPickers.forEach { it.hide() }
+        active.unhide()
+        activePicker = active
+    }
+
+    fun getActivePicker(): UIComponent? = activePicker
+
+    fun clearActivePicker() {
+        activePicker?.hide()
+        activePicker = null
+    }
+
+    fun clearAll() {
+        floatingComponents.forEach { it.parent.removeChild(it) }
+        floatingComponents.clear()
+        colorPickers.clear()
+    }
+}
+
+fun UIComponent.attachToWindow(window: Window): UIComponent {
+    this.setChildOf(window)
+    FloatingUIManager.register(this)
+    return this
+}
+
+fun attachTooltip(window: Window, anchor: UIComponent, description: String) {
+    val tooltip = createBlock(3f)
+        .constrain {
+            width = (description.width() + 10).pixels()
+            height = 20.pixels()
+            x = CenterConstraint()
+            y = CenterConstraint() + 150.pixels()
+        }
+        .setColor(Color.black)
+        .setChildOf(window)
+
+    val tooltipText = UIText(description)
+        .constrain {
+            x = CenterConstraint()
+            y = CenterConstraint()
+        }
+        .setColor(Color.WHITE)
+        .setChildOf(tooltip)
+
+    tooltip.hide(true)
+
+    anchor.onMouseEnter { tooltip.unhide(true) }
+    anchor.onMouseLeave { tooltip.hide(true) }
+
+    FloatingUIManager.register(tooltip)
+    FloatingUIManager.register(tooltipText)
+}
+

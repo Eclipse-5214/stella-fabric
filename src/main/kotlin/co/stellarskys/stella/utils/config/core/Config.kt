@@ -16,19 +16,16 @@ import gg.essential.elementa.components.*
 import gg.essential.elementa.constraints.*
 import gg.essential.elementa.constraints.animation.Animations
 import gg.essential.elementa.dsl.*
-import gg.essential.elementa.effects.Effect
 import gg.essential.elementa.effects.OutlineEffect
 import gg.essential.elementa.markdown.MarkdownComponent
 import gg.essential.universal.UMatrixStack
 import net.minecraft.client.MinecraftClient
 import kotlinx.serialization.json.*
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
-import net.minecraft.client.gui.DrawContext
 import net.minecraft.client.util.DefaultSkinHelper
 import net.minecraft.entity.player.PlayerModelPart
 import java.awt.Color
 import java.io.File
-import kotlin.io.path.Path
 
 //TODO Use gradient for the Slider
 
@@ -36,7 +33,6 @@ import kotlin.io.path.Path
 class Config(
     configFileName: String,
     modID: String,
-    theme: File? = null,
     file: File? = null,
     builder: Config.() -> Unit
 ) {
@@ -49,16 +45,23 @@ class Config(
 
     private var configUI: WindowScreen? = null
     private var selectedCategory: ConfigCategory? = null
+    private val subcategoryLayouts = mutableListOf<SubcategoryLayout>()
     private val elementContainers = mutableMapOf<String, UIComponent>()
     private val elementRefs = mutableMapOf<String, ConfigElement>()
     private val listeners = mutableListOf<(configName: String, value: Any?) -> Unit>()
-
-    private var categoryX = 10
+    private val columnHeights = mutableMapOf<Int, Int>()
 
     private var needsVisibilityUpdate = false
 
     private val resolvedFile: File
         get() = configPath ?: File("config/$mod/settings.json")
+
+    data class SubcategoryLayout(
+        val title: String,
+        val column: Int,
+        val box: UIComponent,
+        val subcategory: ConfigSubcategory
+    )
 
     init {
         this.builder()
@@ -201,6 +204,9 @@ class Config(
                                 }
                             }
 
+                            // Destroy left over window ui
+                            FloatingUIManager.clearAll()
+
                             // Swap out current category panel
                             card.clearChildren()
 
@@ -269,6 +275,11 @@ class Config(
             }
             .setChildOf(root)
 
+        columnHeights.clear()
+        subcategoryLayouts.clear()
+        elementRefs.clear()
+        elementContainers.clear()
+
         category.subcategories.entries.forEachIndexed { index, (name, subcategory) ->
             val column = index % 2
             val row = index / 2
@@ -277,33 +288,22 @@ class Config(
         }
     }
 
-
     private fun buildSubcategory(root: UIComponent, window: Window, subcategory: ConfigSubcategory, title: String, row: Int, column: Int) {
-        val boxHeight = subcategory.elements.values.sumOf { element ->
-            when (element) {
-                is Button -> 20
-                is ColorPicker -> 20
-                is Dropdown -> 20
-                is Keybind -> 20
-                is Slider -> 20
-                is StepSlider -> 20
-                is TextInput -> 20
-                is Toggle -> 20
-                is TextParagraph -> 40 // taller for multiline text
-                else -> 20 // fallback
-            }
-        } + 20 // extra space for title
+        val previousHeight = columnHeights.getOrPut(column) { 10 }
+        val boxHeight = calcSubcategoryHeight(subcategory) + 20 // extra space for title
 
         val box = UIBlock()
             .constrain {
                 width = 180.pixels()
                 height = boxHeight.pixels()
                 x = CenterConstraint() - 100.pixels() + (200 * column).pixels()
-                y = 10.pixels()
+                y = previousHeight.pixels()
             }
             .setChildOf(root)
             .setColor(Palette.Purple.withAlpha(20))
             .effect(OutlineEffect(Palette.Purple.withAlpha(100), 1f))
+
+        columnHeights[column] = previousHeight + boxHeight + 10
 
         val titlebox = UIBlock()
             .constrain {
@@ -342,12 +342,12 @@ class Config(
             val component = when (element) {
                 is Button -> ButtonUIBuilder().build(box, element, window)
                 is ColorPicker -> ColorPickerUIBuilder().build(box, element, window)
-                //is Dropdown -> DropdownUIBuilder().build(box, element)
-                //is Keybind -> KeybindUIBuilder().build(box, element)
-                //is Slider -> SliderUIBuilder().build(box, element)
-                //is StepSlider -> StepSliderUIBuilder().build(box, element)
-                //is TextInput -> TextInputUIBuilder().build(box, element)
-                //is TextParagraph -> TextParagraphUIBuilder().build(box, element)
+                is Dropdown -> DropdownUIBuilder().build(box, element, window)
+                is Keybind -> KeybindUIBuilder().build(box, element, window)
+                is Slider -> SliderUIBuilder().build(box, element, window)
+                is StepSlider -> StepSliderUIBuilder().build(box, element, window)
+                is TextInput -> TextInputUIBuilder().build(box, element, window)
+                is TextParagraph -> TextParagraphUIBuilder().build(box, element)
                 is Toggle -> ToggleUIBuilder().build(box, element, this, window)
                 else -> null
             }
@@ -367,6 +367,8 @@ class Config(
 
             eheight += hmod
         }
+
+        subcategoryLayouts += SubcategoryLayout(title, column, box, subcategory)
     }
 
 
@@ -389,11 +391,14 @@ class Config(
         if (!needsVisibilityUpdate) return
 
         elementContainers.keys.forEach { key ->
-            val element = elementRefs[key] ?: return@forEach
-            val visible = element.isVisible(this)
-
             updateElementVisibility(key)
         }
+
+        selectedCategory?.subcategories?.forEach { (title, subcategory) ->
+            recalculateElementPositions(subcategory)
+        }
+
+        restackSubcategories()
 
         needsVisibilityUpdate = false
     }
@@ -404,6 +409,41 @@ class Config(
         val visible = element.isVisible(this)
 
         if (visible) container.unhide(true) else container.hide(true)
+    }
+
+    private fun recalculateElementPositions(subcategory: ConfigSubcategory) {
+        var currentY = 20 // Start below title
+
+        subcategory.elements.forEach { (key, element) ->
+            val container = elementContainers[key] ?: return@forEach
+            val visible = element.isVisible(this)
+
+            if (visible) {
+                container.setY(currentY.pixels())
+                currentY += getElementHeight(element)
+            }
+        }
+
+        val layout = subcategoryLayouts.find { it.subcategory == subcategory } ?: return
+        layout.box.setHeight((currentY + 0).pixels()) // +0 for padding if needed
+    }
+
+    private fun restackSubcategories() {
+        val columnHeights = mutableMapOf<Int, Int>()
+
+        subcategoryLayouts.forEach { layout ->
+            val column = layout.column
+            val box = layout.box
+            val subcategory = layout.subcategory
+
+            val currentHeight = columnHeights.getOrPut(column) { 10 }
+            val newHeight = calcSubcategoryHeight(subcategory) + 20
+
+            box.setY(currentHeight.pixels())
+            box.setHeight(newHeight.pixels())
+
+            columnHeights[column] = currentHeight + newHeight + 10
+        }
     }
 
     // Helper functions
@@ -503,6 +543,28 @@ class Config(
                     if (newValue != null) element.value = newValue
                 }
             }
+        }
+    }
+
+    private fun getElementHeight(element: ConfigElement): Int {
+        if (!element.isVisible(this)) return 0
+        return when (element) {
+            is Button -> 20
+            is ColorPicker -> 20
+            is Dropdown -> 20
+            is Keybind -> 20
+            is Slider -> 20
+            is StepSlider -> 20
+            is TextInput -> 20
+            is Toggle -> 20
+            is TextParagraph -> 40 // taller for multiline text
+            else -> 20 // fallback
+        }
+    }
+
+    private fun calcSubcategoryHeight(subcategory: ConfigSubcategory): Int {
+        return subcategory.elements.values.sumOf { element ->
+            getElementHeight(element)
         }
     }
 

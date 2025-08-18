@@ -3,6 +3,9 @@ package co.stellarskys.stella.utils.config.ui.elements
 import co.stellarskys.stella.utils.Utils.createBlock
 import co.stellarskys.stella.utils.config.RGBA
 import co.stellarskys.stella.utils.config.core.ColorPicker
+import co.stellarskys.stella.utils.config.core.FloatingUIManager
+import co.stellarskys.stella.utils.config.core.attachToWindow
+import co.stellarskys.stella.utils.config.core.attachTooltip
 import co.stellarskys.stella.utils.config.ui.Palette
 import co.stellarskys.stella.utils.config.ui.Palette.withAlpha
 import co.stellarskys.stella.utils.render.Render2D.width
@@ -15,8 +18,6 @@ import gg.essential.elementa.effects.OutlineEffect
 import java.awt.Color
 
 class ColorPickerUIBuilder {
-    var pickerHidden = true
-
     fun build(root: UIComponent, colorpicker: ColorPicker, window: Window): UIComponent {
         val wrapper = UIBlock()
             .constrain {
@@ -36,33 +37,7 @@ class ColorPickerUIBuilder {
             }
             .setChildOf(wrapper)
 
-        val tooltip = createBlock(3f)
-            .constrain {
-                width = (colorpicker.description.width() + 10).pixels()
-                height = 20.pixels()
-                x = CenterConstraint()
-                y = CenterConstraint() + 150.pixels()
-            }
-            .setColor(Color.black)
-            .setChildOf(window)
-
-        val tooltipText = UIText(colorpicker.description)
-            .constrain {
-                x = CenterConstraint()
-                y = CenterConstraint()
-            }
-            .setColor(Color.WHITE)
-            .setChildOf(tooltip)
-
-        tooltip.hide(true)
-
-        name.onMouseEnter {
-            tooltip.unhide(true)
-        }
-
-        name.onMouseLeave {
-            tooltip.hide(true)
-        }
+        attachTooltip(window,name, colorpicker.description)
 
         val swatch = createBlock(3f)
             .constrain {
@@ -78,25 +53,36 @@ class ColorPickerUIBuilder {
         //picker
         val pickerWrapper = UIBlock()
             .constrain {
-                width = 100.pixels()
-                height = 100.pixels()
+                width = 78.pixels()
+                height = 96.pixels()
                 x = (wrapper.getRight() + 10).pixels()
                 y = wrapper.getTop().pixels()
             }
             .setColor(Color.black)
-            .setChildOf(window)
             .effect(OutlineEffect(Palette.Purple.withAlpha(100), 1f))
+            .setChildOf(window)
 
         pickerWrapper.hide()
 
-        val hexText = UITextInput((colorpicker.value as RGBA).toHex())
+        FloatingUIManager.registerColorPicker(pickerWrapper)
+
+        val textInput = createBlock(4f)
             .constrain {
-                x = PixelConstraint(2f)
-                y = PixelConstraint(2f)
-                width = PixelConstraint(54f)
+                x = CenterConstraint()
+                y = 4.pixels()
+                width = 70.pixels()
+                height = 15.pixels()
             }
+            .setColor(Palette.Purple.withAlpha(100))
             .setChildOf(pickerWrapper)
 
+        val hexText = UITextInput((colorpicker.value as RGBA).toHex())
+            .constrain {
+                x = CenterConstraint()
+                y = CenterConstraint()
+                width = PixelConstraint(54f)
+            }
+            .setChildOf(textInput)
 
         hexText.onMouseClick {
             grabWindowFocus()
@@ -285,7 +271,7 @@ class ColorPickerUIBuilder {
                 x = PixelConstraint(60f)
                 y = PixelConstraint(79f)
             }
-            .setColor(Palette.Surface2)
+            .setColor(Palette.Purple.withAlpha(100))
             .setChildOf(pickerWrapper)
 
         val formattedAlpha = String.format("%.1f", alpha)
@@ -343,23 +329,13 @@ class ColorPickerUIBuilder {
 
         // logic
         swatch.onMouseClick {
-            /*
-            wrapper.constrain {
-                height = 100.pixels()
-            }
+            pickerWrapper.setY(wrapper.getTop().pixels())
 
-            wrapper.clearChildren()
-            renderExpanded(wrapper, colorpicker)
-             */
-
-            if (pickerHidden) {
-                pickerWrapper.unhide()
-                pickerWrapper
-                    .setY(wrapper.getTop().pixels())
-                pickerHidden = false
+            if (FloatingUIManager.getActivePicker() != pickerWrapper) {
+                FloatingUIManager.setActivePicker(pickerWrapper)
             } else {
                 pickerWrapper.hide()
-                pickerHidden = true
+                FloatingUIManager.clearActivePicker()
             }
         }
         return wrapper
@@ -490,138 +466,4 @@ class ColorPickerUIBuilder {
 
         return wrapper
     }
-
-    /*
-    fun renderCollapsed(wrapper: UIComponent, colorpicker: ColorPicker) {
-        val name = UIText(colorpicker.name)
-            .constrain {
-                x = PixelConstraint(7f) // Moves text to the left
-                y = PixelConstraint(5f)
-            }
-            .setChildOf(wrapper)
-
-        val desc = UIWrappedText("§7" + colorpicker.description)
-            .constrain {
-                x = PixelConstraint(7f)
-                y = PixelConstraint(17f)
-                width = 230.pixels()
-            }
-            .setChildOf(wrapper)
-
-        val inputwrapper = UIRoundedRectangle(5f)
-            .constrain {
-                width = 74.pixels()
-                height = 20.pixels()
-                x = PixelConstraint(338f)  // Positions it on the right
-                y = CenterConstraint()
-            }
-            .setColor(NovaPalette.Surface2)
-            .setChildOf(wrapper)
-
-
-    }
-
-     */
-
-    /*
-    fun renderExpanded(wrapper: UIComponent, colorpicker: ColorPicker) {
-        val name = UIText(colorpicker.name)
-            .constrain {
-                x = PixelConstraint(7f) // Moves text to the left
-                y = PixelConstraint(5f)
-            }
-            .setChildOf(wrapper)
-
-        val desc = UIWrappedText("§7" + colorpicker.description)
-            .constrain {
-                x = PixelConstraint(7f)
-                y = PixelConstraint(17f)
-                width = 230.pixels()
-            }
-            .setChildOf(wrapper)
-
-        val pickerWrapper = UIRoundedRectangle(5f)
-            .constrain {
-                width = 80.pixels()
-                height = 96.pixels()
-                x = PixelConstraint(335f)
-                y = PixelConstraint(2f)
-            }
-            .setColor(NovaPalette.Surface1)
-            .setChildOf(wrapper)
-
-        val inputwrapper = UIRoundedRectangle(5f)
-            .constrain {
-                width = 74.pixels()
-                height = 20.pixels()
-                x = CenterConstraint()
-                y = PixelConstraint(2f)
-            }
-            .setColor(NovaPalette.Surface2)
-            .setChildOf(pickerWrapper)
-
-        val hexText = UITextInput((colorpicker.value as RGBA).toHex())
-            .constrain {
-                x = PixelConstraint(2f)
-                y = CenterConstraint()
-                width = PixelConstraint(54f)
-            }
-            .setChildOf(inputwrapper)
-
-        val swatch = UIRoundedRectangle(3f)
-            .constrain {
-                width = 16.pixels()
-                height = 16.pixels()
-                x = PixelConstraint(56f)
-                y = CenterConstraint()
-            }
-            .setColor((colorpicker.value as RGBA).toColor())
-            .setChildOf(inputwrapper)
-
-        swatch.onMouseClick {
-            wrapper.constrain {
-                height = 60.pixels()
-            }
-
-            wrapper.clearChildren()
-            renderCollapsed(wrapper, colorpicker)
-        }
-
-        hexText.onMouseClick {
-            grabWindowFocus()
-        }
-
-        hexText.onKeyType { _, _ ->
-            val input = (hexText as UITextInput).getText()
-            try {
-                val parsed = RGBA.fromHex(input)
-                colorpicker.value = parsed
-                swatch.setColor(parsed.toColor())
-            } catch (_: Exception) {
-                // fallback: revert to previous
-            }
-        }
-
-        hexText.onFocusLost {
-            var input = (this as UITextInput).getText()
-
-            // Append # if missing
-            if (!input.startsWith("#")) {
-                input = "#$input"
-            }
-
-            // Try parsing it
-            try {
-                val parsed = RGBA.fromHex(input)
-                setText(parsed.toHex())
-            } catch (_: Exception) {
-                setText("#ffffffff")
-                val default = RGBA(255, 255, 255)
-                colorpicker.value = default
-                swatch.setColor(default.toColor())
-            }
-        }
-
-
-     */
 }
