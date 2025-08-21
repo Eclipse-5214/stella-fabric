@@ -286,6 +286,18 @@ class Config(
 
             buildSubcategory(categoryContainer, window, subcategory, name, row, column)
         }
+
+        val maxColumnHeight = columnHeights.values.maxOrNull() ?: 0
+
+        val spacer = UIBlock()
+            .constrain {
+                width = 1.pixels()
+                height = 20.pixels() // or more if you want extra breathing room
+                x = CenterConstraint()
+                y = maxColumnHeight.pixels()
+            }
+            .setChildOf(categoryContainer)
+            .setColor(Color(0, 0, 0, 0)) // fully transparent
     }
 
     private fun buildSubcategory(root: UIComponent, window: Window, subcategory: ConfigSubcategory, title: String, row: Int, column: Int) {

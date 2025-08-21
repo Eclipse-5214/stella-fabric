@@ -13,7 +13,7 @@ import net.minecraft.client.gui.DrawContext
 import kotlin.collections.contains
 
 @Stella.Module
-object mapInfo: Feature("seperateMapInfo", "catacombs") {
+object mapInfo: Feature("separateMapInfo", "catacombs") {
     const val name = "Map Info"
 
     override fun initialize() {

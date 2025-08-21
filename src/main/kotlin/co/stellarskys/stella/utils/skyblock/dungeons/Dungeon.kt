@@ -11,8 +11,10 @@ import co.stellarskys.stella.events.ScoreboardEvent
 import co.stellarskys.stella.events.TablistEvent
 import co.stellarskys.stella.events.TickEvent
 import co.stellarskys.stella.mixin.accessors.AccessorMapState
+import co.stellarskys.stella.utils.NetworkUtils
 import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.Utils.removeFormatting
+import co.stellarskys.stella.utils.skyblock.HypixelApi
 import co.stellarskys.stella.utils.skyblock.LocationUtils
 import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner.currentRoom
 import co.stellarskys.stella.utils.stripControlCodes
@@ -70,8 +72,6 @@ val mimicMessages = listOf(
 
 object Dungeon {
     // regex
-    val floorRegex = Regex("""^The Catacombs \(([MF][1-7]|E)\)$""")
-
     val regexes = mapOf(
         "Floor" to Regex("""^The Catacombs \(([MF][1-7]|E)\)$"""),
         "PlayerInfo" to Regex("""^\[(\d+)] (?:\[\w+] )?(\w{1,16})(?: .)? \((\w+)(?: ([IVXLCDM]+))?\)$"""),
@@ -84,16 +84,15 @@ object Dungeon {
         "PuzzleCount" to Regex("""^Puzzles: \((\d+)\)$"""),
         "Crypts" to Regex("""^Crypts: (\d+)$"""),
         "RoomSecretsFound" to Regex("""(\d+)/(\d+) Secrets"""),
-        "PuzzleState" to Regex("""^([\w ]+):\[([✦✔✖])]\s?\(?(\w{1,16})?\)?$"""),
+        "PuzzleState" to Regex("""^([\w ]+): \[([✦✔✖])]\s?\(?(\w{1,16})?\)?$"""),
         "OpenedRooms" to Regex("""^Opened Rooms: (\d+)$"""),
         "ClearedRooms" to Regex("""^Completed Rooms: (\d+)$"""),
         "ClearedPercent" to Regex("""^Cleared: (\d+)% \(\d+\)$"""),
         "DungeonTime" to Regex("""^Time: (?:(\d+)h)?\s?(?:(\d+)m)?\s?(?:(\d+)s)?$"""),
-        "Mimic" to Regex("""^Party > (?:\[[\w+]+])?(?:\w{1,16}): (.*)$"""),
+        "Mimic" to Regex("""^Party > (?:\[[\w+]+] )?\w{1,16}: (.*)$"""),
         "DungeonComplete" to Regex("""^\s*(Master Mode)?\s?(?:The)? Catacombs - (Entrance|Floor .{1,3})$"""),
         "WatcherDone" to Regex("""\[BOSS] The Watcher: That will be enough for now\.""")
     )
-
 
 
     var partyMembers: MutableList<String> = mutableListOf()
@@ -205,7 +204,8 @@ object Dungeon {
                 val seconds = timeMatch.groupValues.getOrNull(3)?.toIntOrNull() ?: 0
 
                 dungeonSeconds = seconds + (minutes * 60) + (hours * 60 * 60)
-                //println("[Dungeon] time: $dungeonSeconds")
+                println("[Dungeon] time: $dungeonSeconds")
+                println("$hours hr, $minutes m, $seconds s")
             }
 
             secretsFound        = extractInt("SecretsFound", msg, secretsFound)
@@ -228,7 +228,7 @@ object Dungeon {
                 val puzzleEnum = puzzleEnums[puzzleState]  // Assuming PuzzleEnums is a map<String, Int>
                 if (puzzleEnum == 1) puzzlesDone++
 
-                //println("[Dungeon] Puzzle: $puzzleName, State: $puzzleState")
+                println("[Dungeon] Puzzle: $puzzleName, State: $puzzleState")
             }
 
             val playerMatch = regexes["PlayerInfo"]?.find(msg)?.groupValues
@@ -370,6 +370,21 @@ object Dungeon {
                 if (LocationUtils.area != "catacombs") reset()
             }
         })
+
+        HypixelApi.fetchElectionData(
+            onResult = { data ->
+                hasPaul = (
+                        data?.mayorName?.lowercase() == "paul" && data.mayorPerks.any { it.first.lowercase() == "ezpz" }
+                        ) || (
+                        data?.ministerName?.lowercase() == "paul" && data.ministerPerk.lowercase() == "ezpz"
+                        )
+
+                println("The current mayor is ezpz paul: $hasPaul")
+            },
+            onError = { error ->
+                error.printStackTrace()
+            }
+        )
     }
 
     fun reset() {
@@ -466,6 +481,7 @@ object Dungeon {
         }
         if (completedRooms <= scoreData.totalRooms - 1 && !bloodDone) scoreData.adjustedRooms++
 
+        // the issue lies with the skill and speed scores
         scoreData.deathPenalty = (teamDeaths * -2) + if (hasSpiritPet && teamDeaths > 0) 1 else 0
 
         scoreData.completionRatio = scoreData.adjustedRooms.toDouble() / scoreData.totalRooms
@@ -484,22 +500,15 @@ object Dungeon {
         scoreData.bonusScore = cryptScore + mimicScore + paulScore
 
         val totalTime = dungeonSeconds - (floorTimes[floor] ?: 0)
-        val speedScore = when {
-            totalTime < 480 -> 100.0
-            totalTime <= 600 -> 140 - totalTime / 12.0
-            totalTime <= 840 -> 115 - totalTime / 24.0
-            totalTime <= 1140 -> 108 - totalTime / 30.0
-            totalTime <= 3940 -> 98.5 - totalTime / 40.0
-            else -> 0.0
-        }
-
+        val speedScore = calculateSpeedScore(totalTime, if (floor == "E") 0.7 else 1.0)
         scoreData.score = (scoreData.skillScore + scoreData.exploreScore + speedScore + scoreData.bonusScore).toInt()
         scoreData.maxSecrets = ceil(scoreData.totalSecrets * secretsPercentNeeded).toInt()
         scoreData.minSecrets = floor(scoreData.maxSecrets * ((40.0 - scoreData.bonusScore + scoreData.deathPenalty) / 40.0)).toInt()
 
         //println("[Dungeon] Score: ${scoreData.score}, Min Secs: ${scoreData.minSecrets}, Max Secs: ${scoreData.maxSecrets}")
         //println("Skill: ${scoreData.skillScore}, Explore: ${scoreData.exploreScore}")
-        //("Speed: $speedScore, Bonus: ${scoreData.bonusScore}")
+        println("Speed: $speedScore, Bonus: ${scoreData.bonusScore}")
+        //println("Expected Skill Score: ${scoreData.skillScore} | Deaths: $teamDeaths | Puzzles Missed: $missingPuzzles")
 
         /*
         if (scoreData.score >= 300 && !_has300Triggered) {
@@ -597,7 +606,6 @@ object Dungeon {
         for (x in startX until 118 step (mapGapSize / 2)) {
             for (y in startY until 118 step (mapGapSize / 2)) {
                 val i = x + y * 128
-                if ((i % 1).toDouble() != 0.0) break // Kotlin uses Double for mod check like JS
                 if (state.colors.getOrNull(i) == null) continue
 
                 val center = state.colors[i - 1]
@@ -624,6 +632,15 @@ object Dungeon {
         val match = regexes[key]!!.find(msg) ?: return fallback
         return match.groupValues.getOrNull(1) ?: fallback
     }
+
+    fun calculateSpeedScore(time: Int, scale: Double = 1.0): Int = when {
+        time < 492.0 -> 100.0 * scale
+        time < 600.0 -> (140 - time / 12.0) * scale
+        time < 840.0 -> (115 - time / 24.0) * scale
+        time < 1140.0 -> (108 - time / 30.0) * scale
+        time < 3570.0 -> (98.5 - time / 40.0) * scale
+        else -> 0.0
+    }.toInt()
 
     // Usefull functions
     fun getMilestone(asIndex: Boolean = false): Any =

@@ -617,7 +617,7 @@ object DsDebug : CommandUtils(
                 ChatUtils.addMessage(" - $it")
             }
 
-            ChatUtils.addMessage("${Stella.PREFIX} §b$name §Ftype is §b${room.type}§f, explored? ${room.explored}")
+            ChatUtils.addMessage("${Stella.PREFIX} §b$name §ftype is §b${room.type}§f, with a checkmark of §b${room.checkmark}§f, explored? ${room.explored}")
         }
         return 1
     }
