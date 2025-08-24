@@ -86,8 +86,7 @@ object clear{
             val checkmark = getCheckmarks(room.checkmark) ?: return@forEach
 
             // Ts is horrible coding but if it works it works
-            if (roomCheckmarks == 2 && room.secrets != 0 && room.type in setOf(RoomType.NORMAL, RoomType.RARE)) return@forEach
-            if (roomCheckmarks > 0 && room.type in setOf(RoomType.NORMAL, RoomType.RARE)) return@forEach
+            if (roomCheckmarks > 0 && room.type in setOf(RoomType.NORMAL, RoomType.RARE) && room.secrets != 0) return@forEach
             if ((puzzleCheckmarks > 0 && room.type == RoomType.PUZZLE) || room.type == RoomType.ENTRANCE) return@forEach
 
             val minX = room.components.minOf { it.first }
@@ -98,7 +97,7 @@ object clear{
             val roomWidth = maxX - minX
             val roomHeight = maxZ - minZ
 
-            var centerX = minX + roomWidth / 2.0
+            val centerX = minX + roomWidth / 2.0
             var centerZ = minZ + roomHeight / 2.0
 
             if (room.shape == "L") {
@@ -148,7 +147,7 @@ object clear{
             val roomWidth = maxX - minX
             val roomHeight = maxZ - minZ
 
-            var centerX = minX + roomWidth / 2.0
+            val centerX = minX + roomWidth / 2.0
             var centerZ = minZ + roomHeight / 2.0
 
             if (room.shape == "L") {
@@ -224,7 +223,7 @@ object clear{
             val roomWidth = maxX - minX
             val roomHeight = maxZ - minZ
 
-            var centerX = minX + roomWidth / 2.0
+            val centerX = minX + roomWidth / 2.0
             var centerZ = minZ + roomHeight / 2.0
 
             if (room.shape == "L") {
@@ -303,8 +302,6 @@ object clear{
                 val scale = 1f - 0.2f
 
                 matrix.scale(scale, scale, 1f)
-
-                val color = -1
 
                 context.drawTexture(
                     RenderLayer::getGuiTextured,                         // render layer provider

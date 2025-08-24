@@ -104,7 +104,7 @@ object mapRender {
 
     fun renderMapBorder(context: DrawContext) {
         val (w, baseH) = defaultMapSize
-        val borderWidth = 3
+        val borderWidth = mapConfig.mapBdWidth
         val h = baseH + if (mapInfoUnder) 10 else 0
         val color = mapConfig.mapBdColor
         // Top border

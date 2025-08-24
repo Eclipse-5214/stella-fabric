@@ -327,6 +327,8 @@ fun UIComponent.attachToWindow(window: Window): UIComponent {
 }
 
 fun attachTooltip(window: Window, anchor: UIComponent, description: String) {
+    if (description == "") return
+
     val tooltip = createBlock(3f)
         .constrain {
             width = (description.width() + 10).pixels()

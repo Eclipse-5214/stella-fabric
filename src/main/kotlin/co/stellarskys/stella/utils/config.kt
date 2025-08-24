@@ -91,6 +91,17 @@ val config = Config("Stella", "stella") {
                 shouldShow { settings -> settings["mapBorder"] as Boolean }
             }
 
+            stepslider {
+                configName = "mapBdWidth"
+                name = "Width"
+                description = "The width of the map border"
+                min = 1
+                max = 5
+                step = 1
+                default = 2
+                shouldShow { settings -> settings["mapBorder"] as Boolean }
+            }
+
             dropdown {
                 configName = "roomCheckmarks"
                 name = "Room Checkmarks"

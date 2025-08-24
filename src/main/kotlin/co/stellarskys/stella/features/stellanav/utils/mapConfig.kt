@@ -30,8 +30,16 @@ object mapConfig {
     val BloodDoorColor: Color get() = config["bloodDoorColor"] as? Color ?: Color(255, 0, 0, 255)
     val EntranceDoorColor: Color get() = config["entranceDoorColor"] as? Color ?: Color(0, 204, 0, 255)
 
+    // class Colors
+    val healerColor = Color(240, 70, 240, 255)
+    val mageColor = Color(70, 210, 210, 255)
+    val berzColor = Color(255, 0, 0, 255)
+    val archerColor = Color(254, 223, 0, 255)
+    val tankColor = Color(30, 170, 50, 255)
+
     // other colors
     val mapBgColor: Color get() = config["mapBgColor"] as? Color ?: Color(0, 0, 0, 100)
     val mapBorder: Boolean get() = config["mapBorder"] as? Boolean ?: true
     val mapBdColor: Color get() = config["mapBdColor"] as? Color ?: Color(0, 0, 0, 255)
+    val mapBdWidth: Int get() = config["mapBdWidth"] as? Int ?: 2
 }
