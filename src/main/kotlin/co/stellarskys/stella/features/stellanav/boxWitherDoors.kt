@@ -57,21 +57,12 @@ object boxWitherDoors: Feature("boxWitherDoors", "catacombs") {
 
                 val (x, y, z) = door.getPos()
 
-                if (door.rotation == 0) {
-                    Render3D.renderBox(
-                        event.context,
-                        x.toDouble(), y.toDouble(), z.toDouble() + 0.5,
-                        2.0, 3.0, 4.0,
-                        color, true, mapConfig.doorLW
-                    )
-                } else {
-                    Render3D.renderBox(
-                        event.context,
-                        x.toDouble() + 0.5, y.toDouble(), z.toDouble(),
-                        3.0, 2.0, 4.0,
-                        color, true, mapConfig.doorLW
-                    )
-                }
+                Render3D.renderBox(
+                    event.context,
+                    x.toDouble(), y.toDouble(), z.toDouble(),
+                    3.0, 3.0, 4.0,
+                    color, true, mapConfig.doorLW
+                )
             }
         })
     }

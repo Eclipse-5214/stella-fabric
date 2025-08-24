@@ -65,22 +65,24 @@ fun getClassColor(dClass: String?): Color = when (dClass) {
     else -> Color(0, 0, 0, 255)
 }
 
-val roomTypeColors = mapOf(
-    RoomType.NORMAL to mapConfig.NormalColor,
-    RoomType.PUZZLE to mapConfig.PuzzleColor,
-    RoomType.TRAP to mapConfig.TrapColor,
-    RoomType.YELLOW to mapConfig.MinibossColor,
-    RoomType.BLOOD to mapConfig.BloodColor,
-    RoomType.FAIRY to mapConfig.FairyColor,
-    RoomType.ENTRANCE to mapConfig.EntranceColor,
-)
+val roomTypeColors: Map<RoomType, Color>
+    get() = mapOf(
+        RoomType.NORMAL to mapConfig.NormalColor,
+        RoomType.PUZZLE to mapConfig.PuzzleColor,
+        RoomType.TRAP to mapConfig.TrapColor,
+        RoomType.YELLOW to mapConfig.MinibossColor,
+        RoomType.BLOOD to mapConfig.BloodColor,
+        RoomType.FAIRY to mapConfig.FairyColor,
+        RoomType.ENTRANCE to mapConfig.EntranceColor,
+    )
 
-val doorTypeColors = mapOf(
-    DoorType.NORMAL to mapConfig.NormalDoorColor,
-    DoorType.WITHER to mapConfig.WitherDoorColor,
-    DoorType.BLOOD to mapConfig.BloodDoorColor,
-    DoorType.ENTRANCE to mapConfig .EntranceDoorColor
-)
+val doorTypeColors: Map<DoorType, Color>
+    get() = mapOf(
+        DoorType.NORMAL to mapConfig.NormalDoorColor,
+        DoorType.WITHER to mapConfig.WitherDoorColor,
+        DoorType.BLOOD to mapConfig.BloodDoorColor,
+        DoorType.ENTRANCE to mapConfig.EntranceDoorColor,
+    )
 
 
 data class BossMapData(
