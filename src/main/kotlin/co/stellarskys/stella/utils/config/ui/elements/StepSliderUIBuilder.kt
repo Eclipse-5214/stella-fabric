@@ -137,11 +137,12 @@ class StepSliderUIBuilder {
             updateSliderPositionFromStep(quantize(rawValue))
         }
 
-        track.onMouseClick { event -> updateSliderPositionFromMouse(event.relativeX) }
+        track.onMouseClick { event -> if (event.relativeX in -5f..trackWidth + 5f) updateSliderPositionFromMouse(event.relativeX) }
 
         track.onMouseDrag { x, y, _ ->
+            val withinX = x in -5f..trackWidth + 5f
             val withinY = y in -5f..(track.getHeight().toFloat() + 5f)
-            if (withinY) updateSliderPositionFromMouse(x)
+            if (withinY && withinX) updateSliderPositionFromMouse(x)
         }
 
         valueInput.onMouseClick {

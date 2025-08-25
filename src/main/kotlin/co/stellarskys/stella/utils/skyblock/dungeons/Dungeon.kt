@@ -63,7 +63,7 @@ val mimicMessages = listOf(
     "mimic dead!",
     "mimic killed",
     "mimic killed!",
-    "\$skytils-dungeon-score-mimic\$"
+    $$"$skytils-dungeon-score-mimic$"
 )
 
 

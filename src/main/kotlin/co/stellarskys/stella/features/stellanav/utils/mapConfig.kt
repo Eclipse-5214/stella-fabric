@@ -5,12 +5,12 @@ import java.awt.Color
 
 object mapConfig {
     val checkmarkScale: Float get() = config["checkmarkScale"] as? Float ?: 1f
-    val roomCheckmarks: Int get() = config["roomCheckmarks"] as? Int ?: 2
+    val roomCheckmarks: Int get() = config["roomCheckmarks"] as? Int ?: 0
     val rcsize: Float get() = config["rcsize"] as? Float ?: 1f
-    val puzzleCheckmarks: Int get() = config["puzzleCheckmarks"] as? Int ?: 3
+    val puzzleCheckmarks: Int get() = config["puzzleCheckmarks"] as? Int ?: 0
     val pcsize: Float get() = config["pcsize"] as? Float ?: 1f
 
-    val mapInfoUnder: Boolean get() = config["mapInfoUnder"] as? Boolean ?: true
+    val mapInfoUnder: Boolean get() = config["mapInfoUnder"] as? Boolean ?: false
 
     val noKey: Color get() = config["noKeyColor"] as? Color ?: Color.red
     val key: Color get() = config["keyColor"] as? Color ?: Color.green
@@ -39,10 +39,10 @@ object mapConfig {
 
     // icon settings
     val iconScale: Float get() = config["iconScale"] as? Float ?: 1f
-    val showPlayerHead: Boolean get() = config["showPlayerHeads"] as? Boolean ?: true
+    val showPlayerHead: Boolean get() = config["showPlayerHeads"] as? Boolean ?: false
     val iconBorderWidth: Float get() = config["iconBorderWidth"] as? Float ?: 0.2f
     val iconBorderColor: Color get() = config["iconBorderColor"] as? Color ?: Color(0, 0, 0, 255)
-    val iconClassColors: Boolean get() = config["iconClassColors"] as? Boolean ?: true
+    val iconClassColors: Boolean get() = config["iconClassColors"] as? Boolean ?: false
 
     // other colors
     val mapBgColor: Color get() = config["mapBgColor"] as? Color ?: Color(0, 0, 0, 100)

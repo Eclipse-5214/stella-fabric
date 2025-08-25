@@ -94,6 +94,7 @@ val config = Config("Stella", "stella") {
                 name = "Enable Score Map"
                 description = "Enables the dungeon score map"
                 default = false
+                shouldShow { settings -> settings["mapEnabled"] as Boolean }
             }
 
             toggle {
@@ -101,6 +102,7 @@ val config = Config("Stella", "stella") {
                 name = "Map Info Under Map"
                 description = "Renders map info below the map"
                 default = true
+                shouldShow { settings -> settings["mapEnabled"] as Boolean }
             }
         }
 
@@ -143,7 +145,7 @@ val config = Config("Stella", "stella") {
                 name = "Room Checkmarks"
                 description = "Style of room checkmarks"
                 options = listOf("Checkmark", "Name", "Secrets", "Both")
-                default = 0 // "Checkmark"
+                default = 0
             }
 
             dropdown {
@@ -151,7 +153,7 @@ val config = Config("Stella", "stella") {
                 name = "Puzzle Checkmarks"
                 description = "Style of puzzle checkmarks"
                 options = listOf("Checkmark", "Name", "Secrets", "Both")
-                default = 3 // "Both"
+                default = 0
             }
 
             slider {
@@ -196,7 +198,7 @@ val config = Config("Stella", "stella") {
                 configName = "showPlayerHeads"
                 name = "Player Heads"
                 description = "Use player heads instead of map markers"
-                default = true
+                default = false
             }
 
             slider {
@@ -219,7 +221,7 @@ val config = Config("Stella", "stella") {
                 configName = "iconClassColors"
                 name = "Class Colors"
                 description = "Use the color for the players class for the icon border"
-                default = true
+                default = false
             }
         }
 
@@ -330,7 +332,6 @@ val config = Config("Stella", "stella") {
 
     category( "Msc."){
         subcategory("Block Overlay") {
-
             toggle {
                 configName = "overlayEnabled"
                 name = "Render Block Overlay"

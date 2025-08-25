@@ -16,14 +16,6 @@ import net.minecraft.entity.player.PlayerModelPart
 import net.minecraft.item.map.MapState
 import java.util.UUID
 
-fun clampMap(n: Double, inMin: Double, inMax: Double, outMin: Double, outMax: Double): Double {
-    return when {
-        n <= inMin -> outMin
-        n >= inMax -> outMax
-        else -> (n - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
-    }
-}
-
 object DungeonScanner {
     val availableComponents = getScanCoords().toMutableList()
     val rooms = Array<Room?>(36) { null }
@@ -535,6 +527,14 @@ object DungeonScanner {
                     }
                 }
             }
+        }
+    }
+
+    fun clampMap(n: Double, inMin: Double, inMax: Double, outMin: Double, outMax: Double): Double {
+        return when {
+            n <= inMin -> outMin
+            n >= inMax -> outMax
+            else -> (n - inMin) * (outMax - outMin) / (inMax - inMin) + outMin
         }
     }
 }

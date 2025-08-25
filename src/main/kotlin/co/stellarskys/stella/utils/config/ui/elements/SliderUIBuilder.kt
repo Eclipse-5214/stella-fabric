@@ -124,11 +124,12 @@ class SliderUIBuilder {
             valueInput.setText(inputText)
         }
 
-        track.onMouseClick { event -> updateSliderPosition(event.relativeX) }
+        track.onMouseClick { event -> if (event.relativeX in -5f..trackWidth + 5f) updateSliderPosition(event.relativeX)}
 
         track.onMouseDrag { x, y, _ ->
+            val withinX = x in -5f..trackWidth + 5f
             val withinY = y in -5f..(track.getHeight().toFloat() + 5f)
-            if (withinY) updateSliderPosition(x)
+            if (withinY && withinX) updateSliderPosition(x)
         }
 
         valueInput.onMouseClick {
@@ -173,7 +174,6 @@ class SliderUIBuilder {
         }
 
         updateSliderPosition(((slider.value as Float - sliderMin) / (sliderMax - sliderMin)) * trackWidth)
-
         return container
     }
 }
