@@ -10,6 +10,7 @@ import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.config
 import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
+import co.stellarskys.stella.utils.skyblock.dungeons.RoomRegistry
 import com.mojang.brigadier.Command
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
@@ -36,6 +37,7 @@ class Stella : ClientModInitializer {
 		init()
 		FeatureManager.init()
 		LocalStores.init()
+		RoomRegistry.loadFromRemote()
 
 		ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
 			if (shown) return@register

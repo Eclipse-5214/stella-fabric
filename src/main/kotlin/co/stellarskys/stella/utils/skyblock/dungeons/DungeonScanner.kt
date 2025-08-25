@@ -2,8 +2,6 @@ package co.stellarskys.stella.utils.skyblock.dungeons
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.AreaEvent
-import co.stellarskys.stella.events.ChatEvent
-import co.stellarskys.stella.events.DungeonEvent
 import co.stellarskys.stella.events.EventBus
 import co.stellarskys.stella.events.TickEvent
 import co.stellarskys.stella.utils.ChatUtils
@@ -16,39 +14,7 @@ import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.client.util.DefaultSkinHelper
 import net.minecraft.entity.player.PlayerModelPart
 import net.minecraft.item.map.MapState
-import java.awt.Color
 import java.util.UUID
-
-fun MutableSet<DungeonPlayer>.pushCheck(player: DungeonPlayer) {
-    if (player !in this) {
-        add(player)
-    }
-}
-
-fun MutableSet<Room>.pushCheck(room: Room) {
-    if (room !in this) {
-        add(room)
-    }
-}
-
-fun MutableSet<DungeonScanner.DiscoveredRoom>.pushCheck(room: DungeonScanner.DiscoveredRoom) {
-    if (room !in this) {
-        add(room)
-    }
-}
-
-fun MutableSet<DungeonScanner.RoomTest>.pushCheck(room: DungeonScanner.RoomTest) {
-    if (room !in this) {
-        add(room)
-    }
-}
-
-
-
-fun MutableMap<Room, Long>.pushCheck(room: Room, defaultTime: Long = 0L) {
-    this.putIfAbsent(room, defaultTime)
-}
-
 
 fun clampMap(n: Double, inMin: Double, inMax: Double, outMin: Double, outMax: Double): Double {
     return when {
@@ -68,7 +34,6 @@ object DungeonScanner {
     val players = mutableListOf<DungeonPlayer>()
 
     var currentRoom: Room? = null
-    var currentDoor: Door? = null
     var lastIdx: Int? = null
 
     // TODO: room enter/leave listener
@@ -99,10 +64,10 @@ object DungeonScanner {
             val currRoom = rooms.getOrNull(idx)
 
             /*
-        if (lastIdx != null && lastIdx != idx && prevRoom?.name != currRoom?.name) {
-            _roomLeaveListener.forEach { it(currRoom, prevRoom) }
-        }
-         */
+            if (lastIdx != null && lastIdx != idx && prevRoom?.name != currRoom?.name) {
+                _roomLeaveListener.forEach { it(currRoom, prevRoom) }
+            }
+            */
 
             if (lastIdx == idx) return@register
 
@@ -132,34 +97,19 @@ object DungeonScanner {
         val room: Room,
     )
 
-    data class RoomTest(
-        val x: Int,
-        val z: Int,
-        val center: Int,
-        val rcolor: Int,
-        val idx: Int,
-    )
-
     init {
-        //println("[DungeonScanner] Initializing!")
         EventBus.register<AreaEvent.Main> ({
             TickUtils.schedule(2) {
-               // println("[DungeonScanner] World Changed! New world: ${LocationUtils.area}")
                 if (LocationUtils.area != "catacombs") {
-                    //println("[DungeonScanner] not in catacombs!")
                     reset()
                 }
-
-                //println("[DungeonScanner] Registering Scanner")
                 tickRegister.register()
             }
         })
-
     }
 
     fun onPlayerMove(entity: DungeonPlayer?, x: Double, z: Double, yaw: Float) {
         if (entity == null) return
-
         entity.inRender = true
 
         if ( x in -200.0..-10.0 || z in -200.0..-10.0){
@@ -226,13 +176,10 @@ object DungeonScanner {
             if (room != null) {
                 if (room.height == null) room.height = roofHeight
                 room.scan()
-                println("[DungeonScanner] Room ${room.name} already exists!")
             } else {
                 room = Room(x to z, roofHeight).scan()
-                println("[DungeonScanner] Added Room ${room.name}")
-
                 rooms[idx] = room
-                uniqueRooms.pushCheck(room)
+                uniqueRooms.add(room)
             }
 
             // Scan neighbors *before* claiming this room index
@@ -243,7 +190,6 @@ object DungeonScanner {
                 val blockAbove = WorldUtils.getBlockNumericId(nx, roofHeight + 1, nz)
 
                 if (room.type == RoomType.ENTRANCE && blockBelow != 0) {
-                    println("entrance stuff")
                     continue
                 }
                 if (blockBelow == 0 || blockAbove != 0) continue
@@ -287,7 +233,7 @@ object DungeonScanner {
     }
 
     fun getDoorAtIdx(idx: Int): Door? {
-        return if (idx in doors.indices) doors[idx] as? Door else null
+        return if (idx in doors.indices) doors[idx] else null
     }
 
     fun getDoorAtComp(comp: Pair<Int, Int>): Door? {
@@ -329,7 +275,6 @@ object DungeonScanner {
     }
 
     fun checkRoomState() {
-        //println("checking room state")
         for (room in rooms) {
             if (room == null || room.rotation != null) continue
             room.findRotation()
@@ -337,7 +282,6 @@ object DungeonScanner {
     }
 
     fun checkDoorState() {
-        //println("[DungeonScanner] Checking door state")
         for (door in uniqueDoors) {
             if (door.opened) continue
             door.check()
@@ -405,10 +349,10 @@ object DungeonScanner {
 
             if (currRoom != v.lastRoom) {
                 v.lastRoom?.players?.remove(v)
-                currRoom.players.pushCheck(v)
+                currRoom.players.add(v)
             }
 
-            v.visitedRooms.pushCheck(currRoom, 0)
+            v.visitedRooms.putIfAbsent(currRoom, 0)
             v.lastRoomCheck?.let {
                 val timeSpent = System.currentTimeMillis() - it
                 v.visitedRooms[currRoom] = (v.visitedRooms[currRoom] ?: 0) + timeSpent
@@ -435,10 +379,7 @@ object DungeonScanner {
             player.realZ = clampMap(player.iconZ!!, 0.0, 125.0, -200.0, -10.0)
             player.rotation = v.yaw
             player.currentRoom = getRoomAt(player.realX!!.toInt(), player.realZ!!.toInt())
-            player.currentRoom?.players?.pushCheck(player)
-
-
-            //println(player.toString())
+            player.currentRoom?.players?.add(player)
         }
     }
 
@@ -455,14 +396,14 @@ object DungeonScanner {
                 val center = colors.getOrNull(idx - 1) ?: continue
                 val rcolor = colors.getOrNull(idx + 5 + 128 * 4) ?: continue
 
-                // 🎯 Room center (even/even grid)
+                // Room center (even/even grid)
                 if (cx % 2 == 0 && cz % 2 == 0 && rcolor != 0.toByte()) {
                     val rmx = cx / 2
                     val rmz = cz / 2
                     val roomIdx = getRoomIdx(rmx to rmz)
                     val room = rooms[roomIdx] ?: Room(rmx to rmz).also {newRoom ->
                         rooms[roomIdx] = newRoom
-                        uniqueRooms.pushCheck(newRoom)
+                        uniqueRooms.add(newRoom)
 
                         for ((dx, dz) in mapDirections) {
                             val doorCx = cx + dx
@@ -529,7 +470,7 @@ object DungeonScanner {
                         continue
                     }
 
-                    // ✅ Checkmark logic
+                    // Checkmark logic
                     var check: Checkmark? = null
                     when {
                         center == 30.toByte() && rcolor != 30.toByte() -> {
@@ -554,7 +495,7 @@ object DungeonScanner {
                     continue
                 }
 
-                // 🚪 Door detection (odd coordinate pairing)
+                // Door detection (odd coordinate pairing)
                 if ((cx % 2 != 0 || cz % 2 != 0) && center != 0.toByte()) {
                     val horiz = listOf(
                         colors.getOrNull(idx - 128 - 4) ?: 0,
@@ -597,8 +538,6 @@ object DungeonScanner {
         }
     }
 }
-
-
 
 @Stella.Command
 object DsDebug : CommandUtils(

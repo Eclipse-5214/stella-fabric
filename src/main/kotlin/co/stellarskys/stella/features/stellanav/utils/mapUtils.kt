@@ -57,12 +57,12 @@ val roomTypes = mapOf(
 )
 
 fun getClassColor(dClass: String?): Color = when (dClass) {
-    "Healer" -> Color(240, 70, 240, 255)
-    "Mage" -> Color(70, 210, 210, 255)
-    "Berserk" -> Color(255, 0, 0, 255)
-    "Archer" -> Color(30, 170, 50, 255)
-    "Tank" -> Color(150, 150, 150, 255)
-    else -> Color(0, 0, 0, 255)
+    "Healer"  -> mapConfig.healerColor
+    "Mage"    -> mapConfig.mageColor
+    "Berserk" -> mapConfig.berzColor
+    "Archer"  -> mapConfig.archerColor
+    "Tank"    -> mapConfig.tankColor
+    else      -> Color(0, 0, 0, 255)
 }
 
 val roomTypeColors: Map<RoomType, Color>

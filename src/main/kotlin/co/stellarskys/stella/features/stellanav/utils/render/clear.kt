@@ -2,7 +2,6 @@ package co.stellarskys.stella.features.stellanav.utils.render
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.features.stellanav.utils.*
-import co.stellarskys.stella.features.stellanav.utils.mapConfig.playerIcons
 import co.stellarskys.stella.features.stellanav.utils.mapConfig.puzzleCheckmarks
 import co.stellarskys.stella.features.stellanav.utils.mapConfig.roomCheckmarks
 import co.stellarskys.stella.utils.render.Render2D
@@ -72,13 +71,22 @@ object clear{
 
     // checkmark rendering
     fun renderCheckmarks(context: DrawContext) {
+        val matrix = context.matrices
+        val scale = mapConfig.checkmarkScale
+
         DungeonScanner.discoveredRooms.forEach { (id, room) ->
             val w = 10
             val h = 12
             val x = room.x * spacing - w / 2 + roomSize / 2
             val y = room.z * spacing - h / 2 + roomSize / 2
 
-            context.drawGuiTexture(RenderLayer::getGuiTextured , questionMark, x, y, w, h)
+            matrix.push()
+            matrix.translate(x.toFloat(), y.toFloat(), 0f)
+            matrix.scale(scale, scale, 1f)
+
+            context.drawGuiTexture(RenderLayer::getGuiTextured , questionMark, 0, 0, w, h)
+
+            matrix.pop()
         }
 
         DungeonScanner.uniqueRooms.forEach { room ->
@@ -113,7 +121,13 @@ object clear{
             val x = (location.first * spacing).toInt() - w / 2 + roomSize / 2
             val y = (location.second * spacing).toInt() - h / 2 + roomSize / 2
 
-            context.drawGuiTexture(RenderLayer::getGuiTextured, checkmark, x, y, w, h)
+            matrix.push()
+            matrix.translate(x.toFloat(), y.toFloat(), 0f)
+            matrix.scale(scale, scale, 1f)
+
+            context.drawGuiTexture(RenderLayer::getGuiTextured, checkmark, 0, 0, w, h)
+
+            matrix.pop()
         }
     }
 
@@ -156,7 +170,7 @@ object clear{
             }
 
             val location = Pair(centerX, centerZ)
-            val scale = 0.75f
+            val scale = 0.75f * mapConfig.pcsize
 
 
             val x = (location.first * spacing).toInt() + roomSize / 2
@@ -232,7 +246,7 @@ object clear{
             }
 
             val location = Pair(centerX, centerZ)
-            val scale = 0.75f
+            val scale = 0.75f * mapConfig.rcsize
 
 
             val x = (location.first * spacing).toInt() + roomSize / 2
@@ -290,16 +304,18 @@ object clear{
             matrix.push()
             matrix.translate(x.toFloat(), y.toFloat(), 1f)
             matrix.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(rotation))
+            matrix.scale(mapConfig.iconScale, mapConfig.iconScale, 1f)
 
-            if (playerIcons) {
+            if (mapConfig.showPlayerHead) {
                 val w = 12
                 val h = 12
 
-                val borderColor = getClassColor(v.className)
+                val borderColor = if (mapConfig.iconClassColors) getClassColor(v.className) else mapConfig.iconBorderColor
+
 
                 Render2D.drawRect(context, (-w.toDouble() / 2.0).toInt(), (-h.toDouble() / 2.0).toInt(), w, h, borderColor)
 
-                val scale = 1f - 0.2f
+                val scale = 1f - mapConfig.iconBorderWidth
 
                 matrix.scale(scale, scale, 1f)
 

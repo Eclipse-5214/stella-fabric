@@ -2,6 +2,7 @@ package co.stellarskys.stella.utils.skyblock.dungeons
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.utils.LegIDs
+import co.stellarskys.stella.utils.NetworkUtils
 import co.stellarskys.stella.utils.WorldUtils
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -12,31 +13,26 @@ import java.awt.Color
 import java.io.InputStreamReader
 
 object RoomRegistry {
-    private val gson = Gson()
     private val byCore = mutableMapOf<Int, RoomMetadata>()
     private val allRooms = mutableListOf<RoomMetadata>()
+    private const val ROOM_DATA_URL = "https://raw.githubusercontent.com/Skytils/SkytilsMod/refs/heads/2.x/mod/src/main/resources/assets/catlas/rooms.json"
 
-    init {
-        // Automatically load room data from resource manager when object initializes
-        val resourceManager = Stella.mc.resourceManager
-        load(resourceManager)
-    }
-
-    fun load(resourceManager: ResourceManager) {
-        val id = Identifier.of(Stella.NAMESPACE, "dungeons/roomdata.json")
-        val optional = resourceManager.getResource(id)
-        val resource = optional.orElse(null) ?: return
-
-        val reader = InputStreamReader(resource.inputStream)
-        val type = object : TypeToken<List<RoomMetadata>>() {}.type
-        val rooms = gson.fromJson<List<RoomMetadata>>(reader, type)
-        allRooms += rooms
-
-        for (room in rooms) {
-            for (core in room.cores) {
-                byCore[core] = room
+    fun loadFromRemote() {
+        NetworkUtils.fetchJson<List<RoomMetadata>>(
+            url = ROOM_DATA_URL,
+            onSuccess = { rooms ->
+                allRooms += rooms
+                for (room in rooms) {
+                    for (core in room.cores) {
+                        byCore[core] = room
+                    }
+                }
+                println("RoomRegistry: Loaded ${rooms.size} rooms from Skytils")
+            },
+            onError = { error ->
+                println("RoomRegistry: Failed to load room data — ${error.message}")
             }
-        }
+        )
     }
 
     fun getByCore(core: Int): RoomMetadata? = byCore[core]
@@ -136,38 +132,30 @@ fun getRoomShape(comps: List<Pair<Int, Int>>): String {
     val xs = comps.map { it.first }.toSet()
     val zs = comps.map { it.second }.toSet()
 
-    return when {
-        count == 1 -> "1x1"
-        count == 2 -> "1x2"
-        count == 3 -> if (xs.size == 3 || zs.size == 3) "1x3" else "L"
-        count == 4 -> if (xs.size == 1 || zs.size == 1) "1x4" else "2x2"
-        else       -> "Unknown"
+    return when (count) {
+        1 -> "1x1"
+        2 -> "1x2"
+        3 -> if (xs.size == 3 || zs.size == 3) "1x3" else "L"
+        4 -> if (xs.size == 1 || zs.size == 1) "1x4" else "2x2"
+        else -> "Unknown"
     }
 }
 
 enum class DoorType { NORMAL, WITHER, BLOOD, ENTRANCE }
 enum class DoorState { UNDISCOVERED, DISCOVERED }
-enum class ClearType { MOB, MINIBOSS }
 enum class Checkmark { NONE, WHITE, GREEN, FAILED, UNEXPLORED, UNDISCOVERED }
-
-enum class RoomType {
-    NORMAL, PUZZLE, TRAP, YELLOW, BLOOD, FAIRY, RARE, ENTRANCE, UNKNOWN;
-}
-
-
+enum class RoomType { NORMAL, PUZZLE, TRAP, YELLOW, BLOOD, FAIRY, RARE, ENTRANCE, UNKNOWN; }
 
 val roomTypeMap = mapOf(
-    "mobs" to RoomType.NORMAL,
-    "miniboss" to RoomType.NORMAL,
+    "normal" to RoomType.NORMAL,
     "puzzle" to RoomType.PUZZLE,
     "trap" to RoomType.TRAP,
-    "gold" to RoomType.YELLOW,
+    "champion" to RoomType.YELLOW,
     "blood" to RoomType.BLOOD,
     "fairy" to RoomType.FAIRY,
     "rare" to RoomType.RARE,
-    "spawn" to RoomType.ENTRANCE
+    "entrance" to RoomType.ENTRANCE
 )
-
 
 val mapColorToRoomType = mapOf(
     18 to RoomType.BLOOD,
@@ -217,11 +205,11 @@ fun decodeRoman(roman: String): Int {
     var prev = 0
 
     for (char in roman.uppercase()) {
-        val value = values[char] ?: return 0  // return 0 for invalid characters
-        if (value > prev) {
-            total += value - 2 * prev  // correct for subtraction rule
+        val value = values[char] ?: return 0
+        total += if (value > prev) {
+            value - 2 * prev
         } else {
-            total += value
+            value
         }
         prev = value
     }

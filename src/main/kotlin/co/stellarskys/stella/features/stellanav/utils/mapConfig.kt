@@ -4,11 +4,11 @@ import co.stellarskys.stella.utils.config
 import java.awt.Color
 
 object mapConfig {
+    val checkmarkScale: Float get() = config["checkmarkScale"] as? Float ?: 1f
     val roomCheckmarks: Int get() = config["roomCheckmarks"] as? Int ?: 2
-    val rcsize: Int get() = config["rcsize"] as? Int ?: 0
+    val rcsize: Float get() = config["rcsize"] as? Float ?: 1f
     val puzzleCheckmarks: Int get() = config["puzzleCheckmarks"] as? Int ?: 3
-    val pcsize: Int get() = config["pcsize"] as? Int ?: 0
-    val playerIcons: Boolean get() = config["mapEnabled"] as? Boolean ?: true
+    val pcsize: Float get() = config["pcsize"] as? Float ?: 1f
 
     val mapInfoUnder: Boolean get() = config["mapInfoUnder"] as? Boolean ?: true
 
@@ -31,11 +31,18 @@ object mapConfig {
     val EntranceDoorColor: Color get() = config["entranceDoorColor"] as? Color ?: Color(0, 204, 0, 255)
 
     // class Colors
-    val healerColor = Color(240, 70, 240, 255)
-    val mageColor = Color(70, 210, 210, 255)
-    val berzColor = Color(255, 0, 0, 255)
-    val archerColor = Color(254, 223, 0, 255)
-    val tankColor = Color(30, 170, 50, 255)
+    val healerColor: Color get() = config["healerColor"] as? Color ?: Color(240, 70, 240, 255)
+    val mageColor: Color get() = config["mageColor"] as? Color ?: Color(70, 210, 210, 255)
+    val berzColor: Color get() = config["berzColor"] as? Color ?: Color(255, 0, 0, 255)
+    val archerColor: Color get() = config["archerColor"] as? Color ?: Color(254, 223, 0, 255)
+    val tankColor: Color get() = config["tankColor"] as? Color ?: Color(30, 170, 50, 255)
+
+    // icon settings
+    val iconScale: Float get() = config["iconScale"] as? Float ?: 1f
+    val showPlayerHead: Boolean get() = config["showPlayerHeads"] as? Boolean ?: true
+    val iconBorderWidth: Float get() = config["iconBorderWidth"] as? Float ?: 0.2f
+    val iconBorderColor: Color get() = config["iconBorderColor"] as? Color ?: Color(0, 0, 0, 255)
+    val iconClassColors: Boolean get() = config["iconClassColors"] as? Boolean ?: true
 
     // other colors
     val mapBgColor: Color get() = config["mapBgColor"] as? Color ?: Color(0, 0, 0, 100)

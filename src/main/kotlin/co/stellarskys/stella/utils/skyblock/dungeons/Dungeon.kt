@@ -4,14 +4,12 @@ import co.stellarskys.stella.Stella
 import co.stellarskys.stella.events.AreaEvent
 import co.stellarskys.stella.events.ChatEvent
 import co.stellarskys.stella.events.EntityEvent
-import co.stellarskys.stella.events.Event
 import co.stellarskys.stella.events.EventBus
 import co.stellarskys.stella.events.PacketEvent
 import co.stellarskys.stella.events.ScoreboardEvent
 import co.stellarskys.stella.events.TablistEvent
 import co.stellarskys.stella.events.TickEvent
 import co.stellarskys.stella.mixin.accessors.AccessorMapState
-import co.stellarskys.stella.utils.NetworkUtils
 import co.stellarskys.stella.utils.TickUtils
 import co.stellarskys.stella.utils.Utils.removeFormatting
 import co.stellarskys.stella.utils.skyblock.HypixelApi
@@ -25,7 +23,6 @@ import net.minecraft.item.map.MapDecoration
 import net.minecraft.item.map.MapDecorationTypes
 import net.minecraft.item.map.MapState
 import net.minecraft.network.packet.s2c.play.MapUpdateS2CPacket
-import net.minecraft.world.tick.Tick
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -104,14 +101,9 @@ object Dungeon {
     var floorNumber: Int? = null
 
     // map
-    val MapDecoration.mapX
-        get() = (this.x + 128) shr 1
-
-    val MapDecoration.mapZ
-        get() = (this.z + 128) shr 1
-
-    val MapDecoration.yaw
-        get() = this.rotation * 22.5f
+    val MapDecoration.mapX get() = (this.x + 128) shr 1
+    val MapDecoration.mapZ get() = (this.z + 128) shr 1
+    val MapDecoration.yaw get() = this.rotation * 22.5f
 
     //Map
     var mapCorners = Pair(5, 5)
@@ -175,8 +167,6 @@ object Dungeon {
             if ( percentMatch != null){
                 val percentStr = percentMatch.groupValues[1]
                 clearedPercent = percentStr.toInt()
-
-                //println("[Dungeon] clear percentage: $clearedPercent")
                 return@register
             }
 
@@ -187,8 +177,6 @@ object Dungeon {
             floorNumber = floor?.getOrNull(1)?.digitToIntOrNull() ?: 0
             secretsPercentNeeded = floorSecrets[floor] ?: 1.0
             MimicTrigger.register()
-
-            //println("[Dungeon] floor: $floor, number: $floorNumber")
         })
 
 
@@ -198,14 +186,11 @@ object Dungeon {
 
             val timeMatch = regexes["DungeonTime"]!!.find(msg)
             if (timeMatch != null) {
-
                 val hours = timeMatch.groupValues.getOrNull(1)?.toIntOrNull() ?: 0
                 val minutes = timeMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: 0
                 val seconds = timeMatch.groupValues.getOrNull(3)?.toIntOrNull() ?: 0
 
                 dungeonSeconds = seconds + (minutes * 60) + (hours * 60 * 60)
-                println("[Dungeon] time: $dungeonSeconds")
-                println("$hours hr, $minutes m, $seconds s")
             }
 
             secretsFound        = extractInt("SecretsFound", msg, secretsFound)
@@ -224,11 +209,8 @@ object Dungeon {
                 val puzzleName = puzzleMatch.groupValues[1]
                 val puzzleState = puzzleMatch.groupValues[2]
                 val failedBy = puzzleMatch.groupValues.getOrNull(3)
-
-                val puzzleEnum = puzzleEnums[puzzleState]  // Assuming PuzzleEnums is a map<String, Int>
+                val puzzleEnum = puzzleEnums[puzzleState]
                 if (puzzleEnum == 1) puzzlesDone++
-
-                println("[Dungeon] Puzzle: $puzzleName, State: $puzzleState")
             }
 
             val playerMatch = regexes["PlayerInfo"]?.find(msg)?.groupValues
@@ -236,8 +218,6 @@ object Dungeon {
                 val playerName = playerMatch[2]
                 val className = playerMatch[3]
                 val classLevel = playerMatch[4]
-
-                //println("[Dungeon] Player: $playerName, Class: $className, Level: ${decodeRoman(classLevel)}")
 
                 if (!partyMembers.contains(playerName)) {
                     partyMembers.add(playerName)
@@ -257,7 +237,6 @@ object Dungeon {
 
                     val player = Stella.mc.player ?: return@register
                     if (playerName.equals(player.name.string, ignoreCase = true)) {
-                        println("[Dungeon] This is you")
                         currentClass = className
                         currentLevel = decodeRoman(classLevel)
                     }
@@ -303,7 +282,6 @@ object Dungeon {
             } else if (!inBoss()) {
                 (mapData ?: guessMapData)?.let {
                     updatePlayersFromMap(it)
-                    //DungeonScanner.updateRoomsFromMap(it)
                     DungeonScanner.scanFromMap(it)
                     checkBloodDone(it)
                 }
@@ -373,13 +351,8 @@ object Dungeon {
 
         HypixelApi.fetchElectionData(
             onResult = { data ->
-                hasPaul = (
-                        data?.mayorName?.lowercase() == "paul" && data.mayorPerks.any { it.first.lowercase() == "ezpz" }
-                        ) || (
-                        data?.ministerName?.lowercase() == "paul" && data.ministerPerk.lowercase() == "ezpz"
-                        )
-
-                println("The current mayor is ezpz paul: $hasPaul")
+                hasPaul = (data?.mayorName?.lowercase() == "paul" && data.mayorPerks.any { it.first.lowercase() == "ezpz" }) ||
+                        (data?.ministerName?.lowercase() == "paul" && data.ministerPerk.lowercase() == "ezpz")
             },
             onError = { error ->
                 error.printStackTrace()
@@ -470,18 +443,13 @@ object Dungeon {
         val estimatedTotal = ((100.0 / clearedPercent) * completedRooms + 0.4)
         val totalRooms = estimatedTotal.toInt().takeIf { it > 0 } ?: 36
         scoreData.totalRooms = totalRooms
-
-        //println("[asdfasdf] total rooms: ${scoreData.totalRooms}")
-
         scoreData.adjustedRooms = completedRooms
 
         if (!bloodDone || !inBoss()) {
-            //println("adjusting for blood")
             scoreData.adjustedRooms++
         }
         if (completedRooms <= scoreData.totalRooms - 1 && !bloodDone) scoreData.adjustedRooms++
 
-        // the issue lies with the skill and speed scores
         scoreData.deathPenalty = (teamDeaths * -2) + if (hasSpiritPet && teamDeaths > 0) 1 else 0
 
         scoreData.completionRatio = scoreData.adjustedRooms.toDouble() / scoreData.totalRooms
@@ -504,11 +472,6 @@ object Dungeon {
         scoreData.score = (scoreData.skillScore + scoreData.exploreScore + speedScore + scoreData.bonusScore).toInt()
         scoreData.maxSecrets = ceil(scoreData.totalSecrets * secretsPercentNeeded).toInt()
         scoreData.minSecrets = floor(scoreData.maxSecrets * ((40.0 - scoreData.bonusScore + scoreData.deathPenalty) / 40.0)).toInt()
-
-        //println("[Dungeon] Score: ${scoreData.score}, Min Secs: ${scoreData.minSecrets}, Max Secs: ${scoreData.maxSecrets}")
-        //println("Skill: ${scoreData.skillScore}, Explore: ${scoreData.exploreScore}")
-        println("Speed: $speedScore, Bonus: ${scoreData.bonusScore}")
-        //println("Expected Skill Score: ${scoreData.skillScore} | Deaths: $teamDeaths | Puzzles Missed: $missingPuzzles")
 
         /*
         if (scoreData.score >= 300 && !_has300Triggered) {
@@ -617,6 +580,7 @@ object Dungeon {
             }
         }
     }
+
     //internal helpers
     private fun extractInt(key: String, msg: String, fallback: Int): Int {
         val match = regexes[key]!!.find(msg) ?: return fallback
@@ -642,7 +606,7 @@ object Dungeon {
         else -> 0.0
     }.toInt()
 
-    // Usefull functions
+    // Useful functions
     fun getMilestone(asIndex: Boolean = false): Any =
         if (asIndex) milestones.indexOf(milestone) else milestone
 

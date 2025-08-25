@@ -193,9 +193,6 @@ object EventBus {
                     post(TablistEvent.UpdatePlayer(formatted, unformatted, idx))
                 }
             }
-            is GameMessageS2CPacket -> {
-
-            }
         }
     }
 

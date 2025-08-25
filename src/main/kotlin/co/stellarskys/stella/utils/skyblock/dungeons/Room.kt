@@ -6,27 +6,10 @@ import net.minecraft.block.Blocks
 data class RoomMetadata(
     val name: String,
     val type: String,
-    val shape: String,
-    val doors: String? = null,
+    val cores: List<Int>,
     val secrets: Int = 0,
     val crypts: Int = 0,
-    val reviveStones: Int = 0,
-    val journals: Int = 0,
-    val spiders: Boolean = false,
-    val soul: Boolean = false,
-    val cores: List<Int> = emptyList(),
-    val id: List<String> = emptyList(),
-
-    val secretDetails: SecretDetails = SecretDetails(),
-    val secretCoords: Map<String, List<List<Int>>> = emptyMap()
-)
-
-data class SecretDetails(
-    val wither: Int = 0,
-    val redstoneKey: Int = 0,
-    val bat: Int = 0,
-    val item: Int = 0,
-    val chest: Int = 0
+    val trappedChests: Int = 0
 )
 
 class Room(
@@ -36,7 +19,6 @@ class Room(
     val components = mutableListOf<Pair<Int, Int>>()
     val realComponents = mutableListOf<Pair<Int, Int>>()
     val cores = mutableListOf<Int>()
-    val initcomp = initialComponent
 
     var roomData: RoomMetadata? = null
     var shape: String = "1x1"
@@ -48,7 +30,6 @@ class Room(
     var corner: Triple<Double, Double, Double>? = null
     var rotation: Int? = null
     var type: RoomType = RoomType.UNKNOWN
-    var clear: ClearType? = null
     var secrets: Int = 0
     var secretsFound: Int = 0
     var crypts: Int = 0
@@ -87,10 +68,8 @@ class Room(
         for ((x, z) in realComponents) {
             if (height == null) height = getHighestY(x, z)
             val core = getCore(x, z)
-            //println("Room Core $core")
             cores += core
             loadFromCore(core)
-            //println("Loaded from core!")
         }
         return this
     }
@@ -107,16 +86,6 @@ class Room(
         type = roomTypeMap[data.type.lowercase()] ?: RoomType.NORMAL
         secrets = data.secrets
         crypts = data.crypts
-        clear = when (data.type) {
-            "mob" -> ClearType.MOB
-            "miniboss" -> ClearType.MINIBOSS
-            else -> null
-        }
-
-        //println("[RoomLoader] Loading room metadata for: ${data.name}")
-        //println("  Type: ${data.type}")
-        //println("  Secrets: ${data.secrets}")
-        //println("  Crypts: ${data.crypts}")
     }
 
     fun loadFromMapColor(color: Byte): Room {

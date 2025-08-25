@@ -2,7 +2,6 @@ package co.stellarskys.stella.features.stellanav.utils.render
 
 import co.stellarskys.stella.Stella
 import co.stellarskys.stella.features.stellanav.utils.*
-import co.stellarskys.stella.features.stellanav.utils.mapConfig.playerIcons
 import co.stellarskys.stella.utils.render.Render2D
 import co.stellarskys.stella.utils.skyblock.dungeons.Dungeon
 import co.stellarskys.stella.utils.skyblock.dungeons.DungeonScanner
@@ -92,19 +91,19 @@ object boss {
             matrix.push()
             matrix.translate(x.toFloat(), y.toFloat(), 1f)
             matrix.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(rotation))
+            matrix.scale(mapConfig.iconScale, mapConfig.iconScale, 1f)
 
-            if (playerIcons) {
+            if (mapConfig.showPlayerHead) {
                 val w = 12
                 val h = 12
 
-                val borderColor = getClassColor(v.className)
+                val borderColor = if (mapConfig.iconClassColors) getClassColor(v.className) else mapConfig.iconBorderColor
 
                 Render2D.drawRect(context, (-w.toDouble() / 2.0).toInt(), (-h.toDouble() / 2.0).toInt(), w, h, borderColor)
 
                 val scale = 1f - 0.2f
 
                 matrix.scale(scale, scale, 1f)
-
 
                 context.drawTexture(
                     RenderLayer::getGuiTextured,                         // render layer provider

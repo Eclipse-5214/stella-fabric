@@ -33,10 +33,46 @@ val config = Config("Stella", "stella") {
                 description = "Shows the current dungeon rooms name in a hud"
             }
         }
+
+        subcategory("Class Colors") {
+            colorpicker {
+                configName = "healerColor"
+                name = "Healer Color"
+                description = "Color used for Healer class"
+                default = rgba(240, 70, 240, 255)
+            }
+
+            colorpicker {
+                configName = "mageColor"
+                name = "Mage Color"
+                description = "Color used for Mage class"
+                default = rgba(70, 210, 210, 255)
+            }
+
+            colorpicker {
+                configName = "berzColor"
+                name = "Berserker Color"
+                description = "Color used for Berserker class"
+                default = rgba(255, 0, 0, 255)
+            }
+
+            colorpicker {
+                configName = "archerColor"
+                name = "Archer Color"
+                description = "Color used for Archer class"
+                default = rgba(254, 223, 0, 255)
+            }
+
+            colorpicker {
+                configName = "tankColor"
+                name = "Tank Color"
+                description = "Color used for Tank class"
+                default = rgba(30, 170, 50, 255)
+            }
+        }
     }
 
     category("StellaNav") {
-
         subcategory("general") {
             toggle {
                 configName = "mapEnabled"
@@ -93,7 +129,7 @@ val config = Config("Stella", "stella") {
 
             stepslider {
                 configName = "mapBdWidth"
-                name = "Width"
+                name = "Border Width"
                 description = "The width of the map border"
                 min = 1
                 max = 5
@@ -118,24 +154,72 @@ val config = Config("Stella", "stella") {
                 default = 3 // "Both"
             }
 
-            stepslider {
-                configName = "rcsize"
-                name = "Room Size"
-                description = "Size of room checkmarks"
-                min = 0
-                max = 5
-                step = 1
-                default = 0
+            slider {
+                configName = "checkmarkScale"
+                name = "Checkmark Size"
+                description = "Size of the checkmarks"
+                min = 0.1f
+                max = 2f
+                default = 1f
             }
 
-            stepslider {
+            slider {
+                configName = "rcsize"
+                name = "Room Text"
+                description = "Size of room text"
+                min = 0.1f
+                max = 2f
+                default = 1f
+            }
+
+            slider {
                 configName = "pcsize"
-                name = "Puzzle Size"
-                description = "Size of puzzle checkmarks"
-                min = 0
-                max = 5
-                step = 1
-                default = 0
+                name = "Puzzle Text"
+                description = "Size of puzzle text"
+                min = 0.1f
+                max = 2f
+                default = 1f
+            }
+        }
+
+        subcategory("Player Icons") {
+            slider {
+                configName = "iconScale"
+                name = "Icon Scale"
+                description = "Scale of the player icons"
+                min = 0.1f
+                max = 2f
+                default = 1f
+            }
+
+            toggle {
+                configName = "showPlayerHeads"
+                name = "Player Heads"
+                description = "Use player heads instead of map markers"
+                default = true
+            }
+
+            slider {
+                configName = "iconBorderWidth"
+                name = "Border Width"
+                description = "The width of the icon border"
+                min = 0f
+                max = 1f
+                default = 0.2f
+            }
+
+            colorpicker {
+                configName = "iconBorderColor"
+                name = "Border Color"
+                description = "The color for the icon border"
+                default = rgba(0,0,0,255)
+            }
+
+            toggle {
+                configName = "iconClassColors"
+                name = "Class Colors"
+                description = "Use the color for the players class for the icon border"
+                default = true
             }
         }
 
