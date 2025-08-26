@@ -78,7 +78,7 @@ val config = Config("Stella", "stella") {
                 configName = "mapEnabled"
                 name = "Enable Map"
                 description = "Enables the dungeon map"
-                default = true
+                default = false
             }
 
             toggle {
@@ -325,6 +325,13 @@ val config = Config("Stella", "stella") {
                 configName = "separateMapInfo"
                 name = "Separate Map Info"
                 description = "Renders the map info separate from the dungeon map"
+                default = false
+            }
+
+            toggle {
+                configName = "dungeonBreakdown"
+                name = "Box Wither Doors"
+                description = "Renders a box around wither doors"
                 default = false
             }
         }

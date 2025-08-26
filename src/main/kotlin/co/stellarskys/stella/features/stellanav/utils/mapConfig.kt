@@ -4,6 +4,9 @@ import co.stellarskys.stella.utils.config
 import java.awt.Color
 
 object mapConfig {
+    val bossMapEnabled: Boolean get() = config["bossMapEnabled"] as? Boolean ?: false
+    val scoreMapEnabled: Boolean get() = config["scoreMapEnabled"] as? Boolean ?: false
+
     val checkmarkScale: Float get() = config["checkmarkScale"] as? Float ?: 1f
     val roomCheckmarks: Int get() = config["roomCheckmarks"] as? Int ?: 0
     val rcsize: Float get() = config["rcsize"] as? Float ?: 1f

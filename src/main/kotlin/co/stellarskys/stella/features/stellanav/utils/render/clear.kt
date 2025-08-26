@@ -18,6 +18,25 @@ object clear{
     private val gapSize = 4
     private val spacing = roomSize + gapSize // 18 + 4 = 22
 
+    fun renderMap(context: DrawContext) {
+        val matrix = context.matrices
+        val mapOffset = if (Dungeon.floorNumber == 1) 10.6f else 0f
+        val mapScale = oscale(Dungeon.floorNumber)
+
+        matrix.push()
+        matrix.translate(5f,5f, 0f)
+        matrix.translate(mapOffset, 0f, 0f)
+        matrix.scale(mapScale, mapScale, 1f)
+
+        renderRooms(context)
+        renderCheckmarks(context)
+        renderPuzzleNames(context)
+        renderRoomNames(context)
+        renderPlayers(context)
+
+        matrix.pop()
+    }
+
     // room rendering
     fun renderRooms(context: DrawContext) {
             DungeonScanner.discoveredRooms.forEach { (id, room) ->

@@ -19,38 +19,29 @@ object mapRender {
     fun render(context: DrawContext, x: Float, y: Float, scale: Float) {
         val matrix = context.matrices
 
-        val mapOffset = if (Dungeon.floorNumber == 1) 10.6f else 0f
-        val mapScale = oscale(Dungeon.floorNumber)
-
         matrix.push()
         matrix.translate(x, y,0f)
         matrix.scale(scale, scale, 1f)
         matrix.translate(5f,5f,0f)
 
-        renderMapBackground(context)
-
         if(!Dungeon.inBoss() && !Dungeon.complete) {
-            matrix.push()
-            matrix.translate(5f,5f, 0f)
-            matrix.translate(mapOffset, 0f, 0f)
-            matrix.scale(mapScale, mapScale, 1f)
-
-            clear.renderRooms(context)
-            clear.renderCheckmarks(context)
-            clear.renderPuzzleNames(context)
-            clear.renderRoomNames(context)
-
-            clear.renderPlayers(context)
-            matrix.pop()
-        } else if (!Dungeon.complete) {
+            renderMapBackground(context)
+            clear.renderMap(context)
+            if (mapInfoUnder) renderInfoUnder(context, false)
+            if (mapConfig.mapBorder) renderMapBorder(context)
+        } else if (!Dungeon.complete && mapConfig.bossMapEnabled) {
+            renderMapBackground(context)
             boss.renderMap(context)
-        } else {
+
+            if (mapInfoUnder) renderInfoUnder(context, false)
+            if (mapConfig.mapBorder) renderMapBorder(context)
+        } else if (Dungeon.complete && mapConfig.scoreMapEnabled) {
+            renderMapBackground(context)
             score.render(context)
+
+            if (mapInfoUnder) renderInfoUnder(context, false)
+            if (mapConfig.mapBorder) renderMapBorder(context)
         }
-
-        if (mapInfoUnder) renderInfoUnder(context, false)
-
-        if (mapConfig.mapBorder) renderMapBorder(context)
 
         matrix.pop()
     }
